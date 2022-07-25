@@ -9,18 +9,11 @@ both product files and covers.
 
 Usage
 -----
-In the interest of getting things out quickly, the program is currently being
-released as-is with no proper CLI, so you will need something that is capable
-of compiling .NET programs and modify `Program.cs` to have things run. See
-`Program.cs` for some of the things you can do.
-
-You will need your account ID, your session cookie, and the CSRF token to
-run this.
+There's a CLI now, documentation forthcoming.
 
 TODOs
 -----
-- Add CLI
-- Add parsing for new profile tracks and comics
+- Documentation
 - Handle giveaway detection
 - Try to remove from trade with trades site instead of main site (main site
   seems a bit buggy)
