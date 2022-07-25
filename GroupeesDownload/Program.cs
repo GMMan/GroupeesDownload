@@ -227,7 +227,7 @@ namespace GroupeesDownload
                             }
                             else
                             {
-                                Console.WriteLine($"Something went wrong: {aggEx}");
+                                Console.WriteLine($"Something went wrong: {inner}");
                             }
                             return true;
                         });
