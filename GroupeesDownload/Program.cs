@@ -105,6 +105,13 @@ namespace GroupeesDownload
             };
             rootCommand.Add(generateLinksCommand);
 
+            var exportKeysCommand = new Command("export-keys", "Generates CSV list of keys.")
+            {
+                bundlesDbOption,
+                tradesDbOption,
+                outputOption,
+            };
+            rootCommand.Add(exportKeysCommand);
 
             dumpBundlesCommand.SetHandler(async (userId, cookie, csrfToken, bundlesDb) =>
             {
@@ -203,13 +210,22 @@ namespace GroupeesDownload
                 AccountManagement accManage = new AccountManagement(client, scraper, bundles, tradeProducts);
 
                 var downloadsList = accManage.GenerateDownloadsList(!noCovers);
-                foreach (var product in tradeProducts)
-                {
-                    downloadsList.AddRange(accManage.GenerateDownloadsListForProduct(product, !noCovers));
-                }
 
+                if (output == null) output = new FileInfo("downloads_list.txt");
                 File.WriteAllLines(output.FullName, downloadsList);
             }, bundlesDbOption, tradesDbOption, noCoversOption, outputOption);
+
+            exportKeysCommand.SetHandler((bundlesDb, tradesDb, output) =>
+            {
+                var bundles = LoadBundles(bundlesDb);
+                var tradeProducts = LoadTrades(tradesDb);
+                AccountManagement accManage = new AccountManagement(client, scraper, bundles, tradeProducts);
+
+                var export = accManage.ExportAllKeys();
+
+                if (output == null) output = new FileInfo("keys.csv");
+                File.WriteAllLines(output.FullName, export);
+            }, bundlesDbOption, tradesDbOption, outputOption);
 
             // ================================================================
 

@@ -294,6 +294,14 @@ namespace GroupeesDownload
                 }
             }
 
+            if (tradeProducts != null)
+            {
+                foreach (var product in tradeProducts)
+                {
+                    list.AddRange(GenerateDownloadsListForProduct(product, includeCover));
+                }
+            }
+
             return list;
         }
 
@@ -339,6 +347,44 @@ namespace GroupeesDownload
             }
 
             return list;
+        }
+
+        public List<string> ExportAllKeys()
+        {
+            List<string> export = new List<string>();
+            // Header
+            export.Add("Bundle name,Product name,Platform,Code,Used");
+
+            if (bundles != null)
+            {
+                foreach (var bundle in bundles)
+                {
+                    foreach (var product in bundle.Products)
+                    {
+                        export.AddRange(ExportKeysForProduct(product, bundle));
+                    }
+                }
+            }
+
+            if (tradeProducts != null)
+            {
+                foreach (var product in tradeProducts)
+                {
+                    export.AddRange(ExportKeysForProduct(product, null));
+                }
+            }
+
+            return export;
+        }
+
+        public List<string> ExportKeysForProduct(Product product, Bundle bundle)
+        {
+            List<string> export = new List<string>();
+            foreach (var key in product.Keys)
+            {
+                export.Add($"\"{bundle?.BundleName ?? string.Empty}\",\"{product.ProductName}\",\"{key.PlatformName}\",\"{(key.IsRevealed ? key.Code : "<not revealed>")}\",{key.IsUsed}");
+            }
+            return export;
         }
     }
 }
