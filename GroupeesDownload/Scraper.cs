@@ -93,7 +93,7 @@ namespace GroupeesDownload
                 }
             }
 
-            throw new Exception("Could not find html line.");
+            throw new ParsingException("Could not find html line.", js);
         }
 
         public async Task<List<int>> GetAllTradesCompletedProductIds()
@@ -143,7 +143,7 @@ namespace GroupeesDownload
                 }
             }
 
-            throw new Exception("Could not find html line.");
+            throw new ParsingException("Could not find html line.", js);
         }
 
         async Task ParseProfileSingleProductDetails(string html, Product p)
@@ -172,7 +172,7 @@ namespace GroupeesDownload
                     if (nStatus.TextContent.Contains("(used)"))
                         k.IsRevealed = true;
                     else
-                        System.Diagnostics.Debugger.Break();
+                        throw new ParsingException($"Key status contains unknown text: {nStatus.TextContent}", nKey.OuterHtml);
                 }
 
                 if (k.IsRevealed)
@@ -216,7 +216,7 @@ namespace GroupeesDownload
                 }
             }
 
-            throw new Exception("Could not find html line.");
+            throw new ParsingException("Could not find html line.", js);
         }
 
         async Task<List<int>> ParseTradesCompletedPageForProductIds(string html)
@@ -255,7 +255,7 @@ namespace GroupeesDownload
                     continue;
                 }
 
-                if (!nProduct.HasClassName("product")) throw new ArgumentException("Non-product found at root level.");
+                if (!nProduct.HasClassName("product")) throw new ParsingException("Non-product found at root level.", nProduct.OuterHtml);
                 Product p = new Product();
 
                 // Basic info
@@ -274,7 +274,7 @@ namespace GroupeesDownload
                         if (text.Contains("Traded Out"))
                             p.IsTradedOut = true;
                         else if (!text.Contains("Set for trade") && !text.Contains("Available in Giveaways"))
-                            System.Diagnostics.Debugger.Break();
+                            throw new ParsingException($"Product meta contains unknown text: {text}", nProductMeta.OuterHtml);
                     }
                     p.IsRevealed = nActions.GetSingleOrDefaultByClassName("reveal-product") == null;
                     if (!p.IsRevealed)
@@ -357,7 +357,7 @@ namespace GroupeesDownload
                                     else if (text.Contains("Redeemed"))
                                         k.IsUsed = true;
                                     else if (!text.Contains("Not revealed") && !text.Contains("Set for trade") && !text.Contains("Available in Giveaways"))
-                                        System.Diagnostics.Debugger.Break();
+                                        throw new ParsingException($"Key meta contains unknown text: {text}", nKey.OuterHtml);
                                 }
 
                                 var nKeyUnrevealedGroup = nKey.GetSingleOrDefaultByClassName("unrevealed-group");
@@ -413,7 +413,7 @@ namespace GroupeesDownload
                             var dp = new DownloadableProduct();
                             dp.Name = nDownloadable.QuerySelector(":scope > h3").TextContent;
                             dp.Files = ParseFiles(nDownloadable);
-                            if (dp.Files.Count == 0) System.Diagnostics.Debugger.Break();
+                            //if (dp.Files.Count == 0) System.Diagnostics.Debugger.Break();
                             p.Downloads.Add(dp);
                         }
                         // Games/music
@@ -423,7 +423,7 @@ namespace GroupeesDownload
                             if (nDownloadable.InnerHtml == "\n" || nDownloadable.InnerHtml.Length == 0) continue;
                             var dp = new DownloadableProduct();
                             dp.Files = ParseFiles(nDownloadable);
-                            if (dp.Files.Count == 0) System.Diagnostics.Debugger.Break();
+                            //if (dp.Files.Count == 0) System.Diagnostics.Debugger.Break();
                             p.Downloads.Add(dp);
                         }
 

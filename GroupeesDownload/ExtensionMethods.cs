@@ -11,15 +11,15 @@ namespace GroupeesDownload
         public static IElement GetSingleByClassName(this IElement self, string name)
         {
             var coll = self.QuerySelectorAll($":scope > .{name}");
-            if (coll.Length != 1) System.Diagnostics.Debugger.Break();
-            return coll.Single();
+            if (coll.Length != 1) throw new ParsingException($"Expected only 1 element with class {name}, found {coll.Length}.");
+            return coll[0];
         }
 
         public static IElement GetSingleOrDefaultByClassName(this IElement self, string name)
         {
             var coll = self.QuerySelectorAll($":scope > .{name}");
-            if (coll.Length > 1) System.Diagnostics.Debugger.Break();
-            return coll.SingleOrDefault();
+            if (coll.Length > 1) throw new ParsingException($"Expected only 0 or 1 elements with class {name}, found {coll.Length}.");
+            return coll.Length == 0 ? coll[0] : null;
         }
 
 
