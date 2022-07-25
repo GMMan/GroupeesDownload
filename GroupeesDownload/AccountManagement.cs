@@ -58,7 +58,7 @@ namespace GroupeesDownload
                     {
                         Console.WriteLine($"Revealing {product.ProductName}");
                         await client.RevealProduct(product.Id);
-                        
+
                         Console.WriteLine($"Refreshing product {product.ProductName}");
                         tradeProducts[i] = await scraper.GetProfileSingleProduct(product.Id);
                     }
@@ -279,7 +279,7 @@ namespace GroupeesDownload
             }
         }
 
-        public List<string> GenerateDownloadsList(bool includeCover)
+        public List<string> GenerateDownloadsList(bool includeCover, bool useAria2Folders)
         {
             List<string> list = new List<string>();
 
@@ -287,31 +287,44 @@ namespace GroupeesDownload
             {
                 foreach (var bundle in bundles)
                 {
+                    string append = null;
+                    if (useAria2Folders && !string.IsNullOrWhiteSpace(bundle.BundleName))
+                    {
+                        append = $"\tdir={SanitizeFilename(bundle.BundleName)}";
+                    }
                     foreach (var product in bundle.Products)
                     {
-                        list.AddRange(GenerateDownloadsListForProduct(product, includeCover));
+                        list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append));
                     }
                 }
             }
 
             if (tradeProducts != null)
             {
+                string append = null;
+                if (useAria2Folders)
+                {
+                    append = "\tdir=trades";
+                }
                 foreach (var product in tradeProducts)
                 {
-                    list.AddRange(GenerateDownloadsListForProduct(product, includeCover));
+                    list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append));
                 }
             }
 
             return list;
         }
 
-        public List<string> GenerateDownloadsListForProduct(Product product, bool includeCover)
+        public List<string> GenerateDownloadsListForProduct(Product product, bool includeCover, string append)
         {
             List<string> list = new List<string>();
 
             // Cover
             if (includeCover && product.CoverUrl != null)
+            {
                 list.Add(product.CoverUrl.Replace("plate_square/", string.Empty).Replace("small/", string.Empty).Replace("big/", string.Empty));
+                if (append != null) list.Add(append);
+            }
 
             // Is this music?
             if (product.Tracks.Count != 0)
@@ -333,6 +346,7 @@ namespace GroupeesDownload
                     {
                         //Console.WriteLine($"Music {product.ProductName}: picked {bestFile.PlatformName} from {string.Join(", ", download.Files.Select(x => x.PlatformName))}");
                         list.Add(bestFile.Url);
+                        if (append != null) list.Add(append);
                     }
                 }
             }
@@ -342,7 +356,10 @@ namespace GroupeesDownload
                 {
                     // Queue everything
                     foreach (var file in download.Files)
+                    {
                         list.Add(file.Url);
+                        if (append != null) list.Add(append);
+                    }
                 }
             }
 
@@ -385,6 +402,13 @@ namespace GroupeesDownload
                 export.Add($"\"{bundle?.BundleName ?? string.Empty}\",\"{product.ProductName}\",\"{key.PlatformName}\",\"{(key.IsRevealed ? key.Code : "<not revealed>")}\",{key.IsUsed}");
             }
             return export;
+        }
+
+        static string SanitizeFilename(string s)
+        {
+            // https://stackoverflow.com/a/13617375/1180879
+            var invalids = System.IO.Path.GetInvalidFileNameChars();
+            return String.Join("_", s.Split(invalids, StringSplitOptions.RemoveEmptyEntries)).TrimEnd('.');
         }
     }
 }

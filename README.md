@@ -66,6 +66,8 @@ This will save the metadata of all the products you've received from trades to
 a file named `trades.json` in the current working directory. Similar to,
 bundles, you can change this name by specifying the `--trades-db` option.
 
+**You may have to reobtain tokens for the trades site specifically.**
+
 Note: it is currently unknown how the program behaves when it encounters a
 traded bundle, since I don't have any in my account. If you encounter issues,
 please file an issue.
@@ -125,6 +127,9 @@ aria2c -i downloads_list.txt --header "Cookie: _groupees_session=<cookie>"
 ```
 
 Replace `<cookie>` with your proper session cookie value.
+
+If you are using aria2, you can also specify the `--use-dirs` option to have
+all files automatically placed into directories named after their bundle name.
 
 ### Exporting keys
 
