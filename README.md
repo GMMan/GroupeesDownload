@@ -120,16 +120,17 @@ Cover images are also included. If you don't care for them, specify the
 You can use your favorite downloads manager to import these links. Note that
 the download manager must support cookies or custom headers so you can
 authenticate with the storage server. I use [aria2c](https://aria2.github.io/).
-Usage example:
+
+If you are using aria2, you can also specify the `--use-dirs` option to have
+all files automatically placed into directories named after their bundle name.
+
+aria2c example:
 
 ```
 aria2c -i downloads_list.txt --header "Cookie: _groupees_session=<cookie>"
 ```
 
 Replace `<cookie>` with your proper session cookie value.
-
-If you are using aria2, you can also specify the `--use-dirs` option to have
-all files automatically placed into directories named after their bundle name.
 
 ### Exporting keys
 
