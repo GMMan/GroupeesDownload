@@ -10,6 +10,12 @@ both product files and covers.
 Tutorial
 --------
 
+### Prerequisites
+
+This is a .NET Core 3.1 app, and as such, you need to have the runtime
+installed. Download from [here](https://dotnet.microsoft.com/en-us/download/dotnet/3.1)
+if you do not.
+
 ### Getting your tokens
 
 To interact with your account, you need three pieces of information: user ID,
