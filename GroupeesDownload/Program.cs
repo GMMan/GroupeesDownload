@@ -211,6 +211,24 @@ namespace GroupeesDownload
                 File.WriteAllLines(output.FullName, downloadsList);
             }, bundlesDbOption, tradesDbOption, noCoversOption, outputOption);
 
+            // ================================================================
+
+            //var testCommand = new Command("test", "Debug functionality.")
+            //{
+            //    userIdOption,
+            //    cookieOption,
+            //    csrfTokenOption,
+            //};
+            //rootCommand.AddCommand(testCommand);
+
+            //testCommand.SetHandler(async (userId, cookie, csrfToken) =>
+            //{
+            //    InitClient(userId, cookie, csrfToken);
+            //    await scraper.Test();
+            //}, userIdOption, cookieOption, csrfTokenOption);
+
+            // ================================================================
+
             // Override default exception handling, see https://github.com/dotnet/command-line-api/issues/796#issuecomment-999734612
             var parser = new CommandLineBuilder(rootCommand).UseDefaults().UseExceptionHandler((e, context) =>
                 {

@@ -191,14 +191,40 @@ namespace GroupeesDownload
             {
                 DownloadFile df = new DownloadFile();
                 df.PlatformName = Regex.Replace(nDownload.ChildNodes.Where(x => x.NodeType == NodeType.Text && x.TextContent.Trim().Length != 0).First().TextContent.Trim(),
-                    "^Download for ", string.Empty);
+                    "^Download (for )?", string.Empty);
                 df.Url = nDownload.QuerySelector(":scope > .btn-menu > li > a").GetAttribute("href");
+
+                // Check if preceeding element is <h3>, as this indicates new downloadable product
+                var predecessor = nDownload.PreviousElementSibling;
+                if (predecessor != null && predecessor.TagName == "H3")
+                {
+                    if (dp.Files.Count != 0) p.Downloads.Add(dp);
+                    dp = new DownloadableProduct();
+                    dp.Name = predecessor.TextContent;
+                }
+
                 dp.Files.Add(df);
             }
 
             if (dp.Files.Count != 0) p.Downloads.Add(dp);
 
-            // TODO: music and comics
+            // Music
+            var nTrackList = nDetails.QuerySelector(".track-list");
+            if (nTrackList != null)
+            {
+                foreach (IElement nTrack in nTrackList.ChildNodes.Where(x => x.NodeType == NodeType.Element))
+                {
+                    if (nTrack.TagName != "LI") throw new ParsingException("Non-list item found in track list.", nTrackList.OuterHtml);
+                    Track t = new Track();
+
+                    var nFavorite = nTrack.QuerySelector(":scope > .track-actions > .favorite-star");
+                    t.Id = int.Parse(nFavorite.GetAttribute("data-track-id"));
+                    t.IsFavorite = nFavorite.HasClassName("favorite");
+                    t.Name = nTrack.GetSingleByClassName("track-title").TextContent;
+
+                    p.Tracks.Add(t);
+                }
+            }
         }
 
         async Task<string> GetTradesCompletedPageHtml(int page)
