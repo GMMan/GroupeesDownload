@@ -299,6 +299,8 @@ namespace GroupeesDownload
                         string text = nProductMeta.TextContent;
                         if (text.Contains("Traded Out"))
                             p.IsTradedOut = true;
+                        else if (text.Contains("Givenaway"))
+                            p.IsGiveawayed = true;
                         else if (!text.Contains("Set for trade") && !text.Contains("Available in Giveaways"))
                             throw new ParsingException($"Product meta contains unknown text: {text}", nProductMeta.OuterHtml);
                     }
