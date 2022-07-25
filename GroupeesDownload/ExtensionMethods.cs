@@ -19,7 +19,7 @@ namespace GroupeesDownload
         {
             var coll = self.QuerySelectorAll($":scope > .{name}");
             if (coll.Length > 1) throw new ParsingException($"Expected only 0 or 1 elements with class {name}, found {coll.Length}.");
-            return coll.Length == 0 ? coll[0] : null;
+            return coll.Length == 1 ? coll[0] : null;
         }
 
 
