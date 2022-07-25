@@ -10,7 +10,7 @@ using System.Web;
 
 namespace GroupeesDownload
 {
-    class Client
+    public class Client
     {
         const string ACCEPT_JAVASCRIPT = "text/javascript";
         const string ACCEPT_HTML = "text/html";

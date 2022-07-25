@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace GroupeesDownload
 {
-    class AccountManagement
+    public class AccountManagement
     {
         Client client;
         Scraper scraper;

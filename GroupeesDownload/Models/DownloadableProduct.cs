@@ -4,7 +4,7 @@ using System.Text;
 
 namespace GroupeesDownload.Models
 {
-    class DownloadableProduct
+    public class DownloadableProduct
     {
         public string Name { get; set; }
         public List<DownloadFile> Files { get; set; } = new List<DownloadFile>();

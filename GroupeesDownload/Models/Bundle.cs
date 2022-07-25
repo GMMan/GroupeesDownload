@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace GroupeesDownload.Models
 {
-    class Bundle
+    public class Bundle
     {
         [JsonPropertyName("id")]
         public int Id { get; set; }

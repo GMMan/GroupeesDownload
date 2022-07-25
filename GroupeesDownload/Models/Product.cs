@@ -4,7 +4,7 @@ using System.Text;
 
 namespace GroupeesDownload.Models
 {
-    class Product
+    public class Product
     {
         public int Id { get; set; }
         public string CoverUrl { get; set; }

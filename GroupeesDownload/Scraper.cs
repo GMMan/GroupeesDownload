@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace GroupeesDownload
 {
-    class Scraper
+    public class Scraper
     {
         Client client;
         IBrowsingContext asContext;

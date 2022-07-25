@@ -4,7 +4,7 @@ using System.Text;
 
 namespace GroupeesDownload.Models
 {
-    class Key
+    public class Key
     {
         public int Id { get; set; }
         public string PlatformName { get; set; }
