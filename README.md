@@ -109,6 +109,17 @@ There may be duplicate links if you have obtained a product multiple times.
 Cover images are also included. If you don't care for them, specify the
 `--no-covers` option.
 
+You can use your favorite downloads manager to import these links. Note that
+the download manager must support cookies or custom headers so you can
+authenticate with the storage server. I use [aria2c](https://aria2.github.io/).
+Usage example:
+
+```
+aria2c -i downloads_list.txt --header "Cookie: _groupees_session=<cookie>"
+```
+
+Replace `<cookie>` with your proper session cookie value.
+
 ### Exporting keys
 
 You can also export all the keys from your account. Run the program like
