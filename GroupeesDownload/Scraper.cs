@@ -384,6 +384,8 @@ namespace GroupeesDownload
                                         k.IsPotentiallyNotRevealed = true;
                                     else if (text.Contains("Redeemed"))
                                         k.IsUsed = true;
+                                    else if (text.Contains("Givenaway"))
+                                        k.IsGiveawayed = true;
                                     else if (!text.Contains("Not revealed") && !text.Contains("Set for trade") && !text.Contains("Available in Giveaways"))
                                         throw new ParsingException($"Key meta contains unknown text: {text}", nKey.OuterHtml);
                                 }
