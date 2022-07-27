@@ -149,7 +149,7 @@ namespace GroupeesDownload
             var nTransmittedInfo = nCell.GetSingleOrDefaultByClassName("transmitted-info");
             if (nTransmittedInfo != null)
             {
-                var text = nTransmittedInfo.GetSingleByClassName(".h4").TextContent;
+                var text = nTransmittedInfo.GetSingleByClassName("h4").TextContent;
                 if (text.Contains("Givenaway"))
                     p.IsGiveawayed = true;
                 else if (text.Contains("Traded out"))
