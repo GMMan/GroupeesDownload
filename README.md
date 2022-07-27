@@ -23,26 +23,13 @@ if you do not.
 
 ### Getting your tokens
 
-To interact with your account, you need three pieces of information: user ID,
-session cookie, and CSRF token. Visit [groupees.com](https://groupees.com),
-log in, open up the developer console in your browser
-(Ctrl-Shift-C on Chrome, Ctrl-Shift-J on Firefox), and enter the following:
-
-```js
-const userId = document.body.querySelector('.fayepub').getAttribute('data-user');
-const csrfToken = document.getElementsByName('csrf-token')[0].getAttribute('content');
-console.log('--user-id ' + userId + ' --csrf-token "' + csrfToken + '"');
-```
-
-This will print the user ID and CSRF token that you can pass to the program.
-Copy and paste this to a blank text document for later.
-
-To get the session cookie, check the instructions [here](https://www.cookieyes.com/blog/how-to-check-cookies-on-your-website-manually/),
+To interact with your account, you need your session cookie. First, visit [groupees.com](https://groupees.com)
+and log in. To get the session cookie, check the instructions [here](https://www.cookieyes.com/blog/how-to-check-cookies-on-your-website-manually/),
 looking specifically for `_groupees_session`. Copy the corresponding value,
-and at the end of the text document you've previously created, type
-`--cookie`, followed by a space, then a `"`, and paste the cookie value.
-Finish by typing another `"`. Keep this file around so you can copy from it
-as you run the program. The tokens are valid indefinitely.
+and in a text document type `--cookie`, followed by a space, then a `"`,
+and paste the cookie value. Finish by typing another `"`. Keep this file
+around so you can copy from it as you run the program. The cookie is valid
+indefinitely.
 
 When you see `<tokens>` in the instructions below, replace it with the contents
 of this text document.

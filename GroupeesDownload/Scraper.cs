@@ -27,6 +27,22 @@ namespace GroupeesDownload
             ;
         }
 
+        public async Task AutoSetTokens()
+        {
+            Console.WriteLine("Auto-obtaining user ID and CSRF token...");
+
+            string html = await client.GetHome();
+            using IDocument doc = await asContext.OpenAsync(req => req.Content(html));
+
+            var nCsrfToken = doc.Head.QuerySelector("meta[name='csrf-token']");
+            string csrfToken = nCsrfToken.GetAttribute("content");
+
+            var nFayepub = doc.Body.QuerySelector(".fayepub");
+            int userId = int.Parse(nFayepub.GetAttribute("data-user"));
+
+            client.SetOtherTokens(userId, csrfToken);
+        }
+
         public async Task<List<Product>> GetAllTradesCompletedProducts()
         {
             List<Product> products = new List<Product>();
@@ -74,7 +90,7 @@ namespace GroupeesDownload
             List<Bundle> bundles = new List<Bundle>();
             for (int i = 1; ; ++i)
             {
-                Console.WriteLine($"Getting page {i}");
+                Console.WriteLine($"Getting bundles page {i}");
                 var currPageBundles = await client.GetBundles(i);
                 if (currPageBundles.Count == 0) break;
                 bundles.AddRange(currPageBundles);
@@ -105,7 +121,7 @@ namespace GroupeesDownload
             List<int> ids = new List<int>();
             for (int i = 1; ; ++i)
             {
-                Console.WriteLine($"Getting page {i}");
+                Console.WriteLine($"Getting trades page {i}");
                 string html = await GetTradesCompletedPageHtml(i);
                 var pageIds = await ParseTradesCompletedPageForProductIds(html);
                 if (pageIds.Count == 0) break;

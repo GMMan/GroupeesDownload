@@ -20,13 +20,27 @@ namespace GroupeesDownload
         HttpClient client;
         int userId;
 
-        public Client(int userId, string cookie, string csrfToken)
+        public Client(string cookie)
         {
             HttpClientHandler handler = new HttpClientHandler();
             handler.CookieContainer.Add(new System.Net.Cookie("_groupees_session", cookie, "/", "groupees.com"));
             client = new HttpClient(handler);
+        }
+
+        public Client(int userId, string cookie, string csrfToken) : this(cookie)
+        {
+            SetOtherTokens(userId, csrfToken);
+        }
+
+        public void SetOtherTokens(int userId, string csrfToken)
+        {
             client.DefaultRequestHeaders.Add("X-CSRF-Token", csrfToken);
             this.userId = userId;
+        }
+
+        public async Task<string> GetHome()
+        {
+            return await client.GetStringAsync($"{BASE_ADDR}/");
         }
 
         public async Task<List<Bundle>> GetBundles(int page)

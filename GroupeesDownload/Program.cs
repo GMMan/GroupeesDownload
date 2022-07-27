@@ -120,21 +120,21 @@ namespace GroupeesDownload
 
             dumpBundlesCommand.SetHandler(async (userId, cookie, csrfToken, bundlesDb) =>
             {
-                InitClient(userId, cookie, csrfToken);
+                await InitClient(userId, cookie, csrfToken);
                 var bundles = await scraper.GetAllBundles();
                 SaveBundles(bundlesDb, bundles);
             }, userIdOption, cookieOption, csrfTokenOption, bundlesDbOption);
 
             dumpTradesCommand.SetHandler(async (userId, cookie, csrfToken, tradesDb) =>
             {
-                InitClient(userId, cookie, csrfToken);
+                await InitClient(userId, cookie, csrfToken);
                 var tradeProducts = await scraper.GetAllTradesCompletedProducts();
                 SaveTrades(tradesDb, tradeProducts);
             }, userIdOption, cookieOption, csrfTokenOption, tradesDbOption);
 
             unmarkTradesCommand.SetHandler(async (userId, cookie, csrfToken, bundlesDb, tradesDb, isAll, ids) =>
             {
-                InitClient(userId, cookie, csrfToken);
+                await InitClient(userId, cookie, csrfToken);
 
                 var bundles = LoadBundles(bundlesDb);
                 var tradeProducts = LoadTrades(tradesDb);
@@ -153,7 +153,7 @@ namespace GroupeesDownload
 
             unmarkGiveawaysCommand.SetHandler(async (userId, cookie, csrfToken, bundlesDb, tradesDb, isAll, ids) =>
             {
-                InitClient(userId, cookie, csrfToken);
+                await InitClient(userId, cookie, csrfToken);
 
                 var bundles = LoadBundles(bundlesDb);
                 var tradeProducts = LoadTrades(tradesDb);
@@ -172,7 +172,7 @@ namespace GroupeesDownload
 
             revealProductsCommand.SetHandler(async (userId, cookie, csrfToken, bundlesDb, tradesDb, isAll, ids) =>
             {
-                InitClient(userId, cookie, csrfToken);
+                await InitClient(userId, cookie, csrfToken);
 
                 var bundles = LoadBundles(bundlesDb);
                 var tradeProducts = LoadTrades(tradesDb);
@@ -191,7 +191,7 @@ namespace GroupeesDownload
 
             revealKeysCommand.SetHandler(async (userId, cookie, csrfToken, bundlesDb, tradesDb, isAll, ids) =>
             {
-                InitClient(userId, cookie, csrfToken);
+                await InitClient(userId, cookie, csrfToken);
 
                 var bundles = LoadBundles(bundlesDb);
                 var tradeProducts = LoadTrades(tradesDb);
@@ -288,14 +288,21 @@ namespace GroupeesDownload
             return await parser.InvokeAsync(args);
         }
 
-        static void InitClient(int userId, string cookie, string csrfToken)
+        static async Task InitClient(int userId, string cookie, string csrfToken)
         {
-            if (userId == 0) throw new ArgumentException("No user ID specified.", nameof(userId));
             if (string.IsNullOrEmpty(cookie)) throw new ArgumentException("No session cookie specified.", nameof(cookie));
-            if (string.IsNullOrEmpty(csrfToken)) throw new ArgumentException("No CSRF token specified.", nameof(csrfToken));
 
-            client = new Client(userId, cookie, csrfToken);
-            scraper = new Scraper(client);
+            if (userId == 0 || string.IsNullOrEmpty(csrfToken))
+            {
+                client = new Client(cookie);
+                scraper = new Scraper(client);
+                await scraper.AutoSetTokens();
+            }
+            else
+            {
+                client = new Client(userId, cookie, csrfToken);
+                scraper = new Scraper(client);
+            }
         }
 
         static List<Bundle> LoadBundles(FileInfo bundlesDb)
