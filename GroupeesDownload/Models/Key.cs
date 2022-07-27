@@ -16,6 +16,7 @@ namespace GroupeesDownload.Models
         public bool IsTradedOut { get; set; }
         public bool IsGiveawayed { get; set; }
         public bool IsPotentiallyNotRevealed { get; set; }
+        public bool IsThirdParty { get; set; }
         public int? TradeId { get; set; }
         public int? GiveawayId { get; set; }
 

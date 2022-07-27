@@ -30,8 +30,12 @@ namespace GroupeesDownload
         public async Task<List<Product>> GetAllTradesCompletedProducts()
         {
             List<Product> products = new List<Product>();
-            foreach (var id in await GetAllTradesCompletedProductIds())
+            var ids = await GetAllTradesCompletedProductIds();
+            int num = 0;
+            foreach (var id in ids)
             {
+                ++num;
+                Console.WriteLine($"Getting trade product {num}/{ids.Count}");
                 products.Add(await GetProfileSingleProduct(id));
             }
             return products;
@@ -101,6 +105,7 @@ namespace GroupeesDownload
             List<int> ids = new List<int>();
             for (int i = 1; ; ++i)
             {
+                Console.WriteLine($"Getting page {i}");
                 string html = await GetTradesCompletedPageHtml(i);
                 var pageIds = await ParseTradesCompletedPageForProductIds(html);
                 if (pageIds.Count == 0) break;
@@ -125,6 +130,32 @@ namespace GroupeesDownload
             Product p = new Product();
             p.CoverUrl = "https://groupees.com" + nCell.GetSingleByClassName("product-cover").GetAttribute("src");
             p.ProductName = nCell.QuerySelector("h4").GetAttribute("title");
+            var nTransmittedInfo = nCell.GetSingleOrDefaultByClassName("transmitted-info");
+            if (nTransmittedInfo != null)
+            {
+                var text = nTransmittedInfo.GetSingleByClassName(".h4").TextContent;
+                if (text.Contains("Givenaway"))
+                    p.IsGiveawayed = true;
+                else if (text.Contains("Traded out"))
+                    p.IsTradedOut = true;
+                else if (!text.Contains("Set for Trade") && !text.Contains("Set for Giveaway"))
+                    throw new ParsingException($"Product transmitted info contains unknown text: {text}", nTransmittedInfo.OuterHtml);
+
+                var revokeButton = nTransmittedInfo.GetSingleByClassName("btn-revoke-product");
+                if (!revokeButton.HasClassName("disabled"))
+                {
+                    if (revokeButton.GetAttribute("data-trade") == "true")
+                    {
+                        p.IsSetForTrade = true;
+                        p.TradeId = int.Parse(revokeButton.GetAttribute("data-id"));
+                    }
+                    else
+                    {
+                        p.IsSetForGiveaway = true;
+                        p.GiveawayId = int.Parse(revokeButton.GetAttribute("data-id"));
+                    }
+                }
+            }
             return p;
         }
 
@@ -162,6 +193,9 @@ namespace GroupeesDownload
                 Key k = new Key();
                 var keyP = nKey.QuerySelector(":scope > p");
                 k.PlatformName = Regex.Replace(keyP.ChildNodes[0].TextContent.Trim(), " Key$", string.Empty);
+                // Assume if third party, there's only one key in the product so the whole product represents the key
+                k.IsThirdParty = p.ProductInfoHtml.Contains("This product was created with third party key.");
+                
                 var nStatus = nKey.QuerySelector(".key-status");
                 if (nStatus.TextContent.Length == 0)
                 {
@@ -169,9 +203,14 @@ namespace GroupeesDownload
                 }
                 else
                 {
-                    if (nStatus.TextContent.Contains("(used)"))
+                    var text = nStatus.TextContent;
+                    if (text.Contains("(used)"))
                         k.IsRevealed = true;
-                    else
+                    else if (text.Contains("(givenaway"))
+                        k.IsGiveawayed = true;
+                    else if (text.Contains("(traded out)")) // Not verified
+                        k.IsTradedOut = true;
+                    else if (!text.Contains("(Not revealed)") && !text.Contains("(set for trade)") && !text.Contains("(available in Giveaways)"))
                         throw new ParsingException($"Key status contains unknown text: {nStatus.TextContent}", nKey.OuterHtml);
                 }
 
@@ -179,7 +218,22 @@ namespace GroupeesDownload
                 {
                     k.Code = nKey.QuerySelector(".code").GetAttribute("value");
                     k.IsUsed = nKey.QuerySelector(".key-usage-toggler").GetAttribute("data-state") == "true";
-                    // TODO: trade status and giveaway status
+                }
+                else
+                {
+                    var giveawayButton = nKey.QuerySelector(".btn-giveaway-key");
+                    if (giveawayButton != null && giveawayButton.HasClassName("active"))
+                    {
+                        k.IsSetForGiveaway = true;
+                        k.GiveawayId = int.Parse(giveawayButton.GetAttribute("data-id"));
+                    }
+
+                    var tradeButton = nKey.QuerySelector(".btn-trade-key");
+                    if (tradeButton != null && tradeButton.HasClassName("active"))
+                    {
+                        k.IsSetForTrade = true;
+                        k.TradeId = int.Parse(giveawayButton.GetAttribute("data-id"));
+                    }
                 }
 
                 p.Keys.Add(k);
@@ -285,190 +339,202 @@ namespace GroupeesDownload
                 Product p = new Product();
 
                 // Basic info
-                p.Id = int.Parse(nProduct.GetAttribute("data-id"));
+                var idAttr = nProduct.GetAttribute("data-id");
+                // Gifted coins don't have IDs
+                p.Id = idAttr == null ? -1 : int.Parse(idAttr);
                 p.CoverUrl = nProduct.GetSingleByClassName("cover").GetAttribute("src");
                 var nDetails = nProduct.GetSingleByClassName("details");
-                p.ProductName = nDetails.GetSingleByClassName("product-name").TextContent;
-                p.IsFavorite = nDetails.GetSingleOrDefaultByClassName("favorite-star")?.HasClassName("favorite") ?? false;
-                var nActions = nDetails.GetSingleOrDefaultByClassName("actions");
-                if (nActions != null)
+                if (p.Id == -1)
                 {
-                    var nProductMeta = nActions.GetSingleOrDefaultByClassName("product-meta");
-                    if (nProductMeta != null && nProductMeta.InnerHtml != "\n")
-                    {
-                        string text = nProductMeta.TextContent;
-                        if (text.Contains("Traded Out"))
-                            p.IsTradedOut = true;
-                        else if (text.Contains("Givenaway"))
-                            p.IsGiveawayed = true;
-                        else if (!text.Contains("Set for trade") && !text.Contains("Available in Giveaways"))
-                            throw new ParsingException($"Product meta contains unknown text: {text}", nProductMeta.OuterHtml);
-                    }
-                    p.IsRevealed = nActions.GetSingleOrDefaultByClassName("reveal-product") == null;
-                    if (!p.IsRevealed)
-                    {
-                        var giveawayButton = nActions.GetSingleOrDefaultByClassName("giveaway-product");
-                        var tradeButton = nActions.GetSingleOrDefaultByClassName("trade-product");
-                        if (giveawayButton != null)
-                        {
-                            p.IsSetForGiveaway = giveawayButton.HasClassName("active");
-                            if (p.IsSetForGiveaway)
-                                p.GiveawayId = int.Parse(giveawayButton.GetAttribute("data-id"));
-                            else
-                                p.GiveawayId = null;
-                        }
-                        else
-                        {
-                            p.IsSetForGiveaway = false;
-                            p.GiveawayId = null;
-                        }
-                        if (tradeButton != null)
-                        {
-                            p.IsSetForTrade = tradeButton.HasClassName("active");
-                            if (p.IsSetForTrade)
-                                p.TradeId = int.Parse(tradeButton.GetAttribute("data-id"));
-                            else
-                                p.TradeId = null;
-                        }
-                        else
-                        {
-                            p.IsSetForTrade = false;
-                            p.TradeId = null;
-                        }
-                    }
+                    // Coin handling
+                    p.ProductName = nDetails.QuerySelector(":scope > h3").TextContent;
+                    p.ProductInfoHtml = nDetails.GetSingleByClassName("product-type").InnerHtml;
                 }
                 else
                 {
-                    p.IsRevealed = true;
-                }
-                p.ProductInfoHtml = nDetails.GetSingleOrDefaultByClassName("product-info")?.InnerHtml;
-
-                if (p.IsRevealed)
-                {
-                    var nDownloadsList = nDetails.QuerySelectorAll(":scope > .download-container");
-                    IElement nDownloads = null;
-                    if (nDownloadsList.Length > 1)
+                    p.ProductName = nDetails.GetSingleByClassName("product-name").TextContent;
+                    p.IsFavorite = nDetails.GetSingleOrDefaultByClassName("favorite-star")?.HasClassName("favorite") ?? false;
+                    var nActions = nDetails.GetSingleOrDefaultByClassName("actions");
+                    if (nActions != null)
                     {
-                        Console.WriteLine($"Product {p.ProductName} has multiple download containers!");
-                    }
-                    else if (nDownloadsList.Length == 1)
-                    {
-                        nDownloads = nDownloadsList[0];
-                    }
-
-                    if (nDownloads != null && nDownloads.InnerHtml != "\n" && nDownloads.InnerHtml.Length != 0)
-                    {
-                        // Keys
-                        var nKeys = nDetails.QuerySelector("ul.keys");
-                        if (nKeys != null)
+                        var nProductMeta = nActions.GetSingleOrDefaultByClassName("product-meta");
+                        if (nProductMeta != null && nProductMeta.InnerHtml != "\n")
                         {
-                            foreach (var nKey in nKeys.QuerySelectorAll(":scope > .key"))
+                            string text = nProductMeta.TextContent;
+                            if (text.Contains("Traded Out"))
+                                p.IsTradedOut = true;
+                            else if (text.Contains("Givenaway"))
+                                p.IsGiveawayed = true;
+                            else if (!text.Contains("Set for trade") && !text.Contains("Available in Giveaways"))
+                                throw new ParsingException($"Product meta contains unknown text: {text}", nProductMeta.OuterHtml);
+                        }
+                        p.IsRevealed = nActions.GetSingleOrDefaultByClassName("reveal-product") == null;
+                        if (!p.IsRevealed)
+                        {
+                            var giveawayButton = nActions.GetSingleOrDefaultByClassName("giveaway-product");
+                            var tradeButton = nActions.GetSingleOrDefaultByClassName("trade-product");
+                            if (giveawayButton != null)
                             {
-                                Key k = new Key();
-                                k.Id = int.Parse(nKey.GetAttribute("data-id"));
-                                k.PlatformName = nKey.QuerySelector(":scope > strong").TextContent;
-
-                                var nKeyMeta = nKey.GetSingleByClassName("key-meta");
-                                var nKeyUsed = nKeyMeta.QuerySelector(".usage");
-                                if (nKeyUsed != null)
-                                {
-                                    k.IsUsed = nKeyUsed.HasAttribute("checked");
-                                    k.IsTradedOut = false;
-                                }
+                                p.IsSetForGiveaway = giveawayButton.HasClassName("active");
+                                if (p.IsSetForGiveaway)
+                                    p.GiveawayId = int.Parse(giveawayButton.GetAttribute("data-id"));
                                 else
-                                {
-                                    string text = nKeyMeta.TextContent;
-                                    if (text.Contains("Traded out"))
-                                        k.IsTradedOut = true;
-                                    else if (text.Contains("Potentially not revealed"))
-                                        k.IsPotentiallyNotRevealed = true;
-                                    else if (text.Contains("Redeemed"))
-                                        k.IsUsed = true;
-                                    else if (text.Contains("Givenaway"))
-                                        k.IsGiveawayed = true;
-                                    else if (!text.Contains("Not revealed") && !text.Contains("Set for trade") && !text.Contains("Available in Giveaways"))
-                                        throw new ParsingException($"Key meta contains unknown text: {text}", nKey.OuterHtml);
-                                }
-
-                                var nKeyUnrevealedGroup = nKey.GetSingleOrDefaultByClassName("unrevealed-group");
-                                if (nKeyUnrevealedGroup != null)
-                                {
-                                    var nKeyUnrevealedButtons = nKeyUnrevealedGroup.GetSingleByClassName("input-group-btn");
-                                    var giveawayButton = nKeyUnrevealedButtons.GetSingleOrDefaultByClassName("giveaway");
-                                    var tradeButton = nKeyUnrevealedButtons.GetSingleOrDefaultByClassName("trades");
-                                    if (giveawayButton != null)
-                                    {
-                                        k.IsSetForGiveaway = giveawayButton.HasClassName("active");
-                                        if (k.IsSetForGiveaway)
-                                            k.GiveawayId = int.Parse(giveawayButton.GetAttribute("data-id"));
-                                        else
-                                            k.GiveawayId = null;
-                                    }
-                                    else
-                                    {
-                                        k.IsSetForGiveaway = false;
-                                        k.GiveawayId = null;
-                                    }
-                                    if (tradeButton != null)
-                                    {
-                                        k.IsSetForTrade = tradeButton.HasClassName("active");
-                                        if (k.IsSetForTrade)
-                                            k.TradeId = int.Parse(tradeButton.GetAttribute("data-id"));
-                                        else
-                                            k.TradeId = null;
-                                    }
-                                    else
-                                    {
-                                        k.IsSetForTrade = false;
-                                        k.TradeId = null;
-                                    }
-                                }
+                                    p.GiveawayId = null;
+                            }
+                            else
+                            {
+                                p.IsSetForGiveaway = false;
+                                p.GiveawayId = null;
+                            }
+                            if (tradeButton != null)
+                            {
+                                p.IsSetForTrade = tradeButton.HasClassName("active");
+                                if (p.IsSetForTrade)
+                                    p.TradeId = int.Parse(tradeButton.GetAttribute("data-id"));
                                 else
-                                {
-                                    k.IsRevealed = true;
-                                    var nKeyRevealedGroup = nKey.GetSingleOrDefaultByClassName("revealed-group");
-                                    k.Code = nKeyRevealedGroup.QuerySelector(".code").GetAttribute("value");
-                                }
-
-                                p.Keys.Add(k);
+                                    p.TradeId = null;
+                            }
+                            else
+                            {
+                                p.IsSetForTrade = false;
+                                p.TradeId = null;
                             }
                         }
+                    }
+                    else
+                    {
+                        p.IsRevealed = true;
+                    }
+                    p.ProductInfoHtml = nDetails.GetSingleOrDefaultByClassName("product-info")?.InnerHtml;
 
-                        // Downloads
-                        // Comics/other products
-                        var nDownloadables = nDownloads.QuerySelectorAll(".row > .col-sm-3");
-                        foreach (var nDownloadable in nDownloadables)
+                    if (p.IsRevealed)
+                    {
+                        var nDownloadsList = nDetails.QuerySelectorAll(":scope > .download-container");
+                        IElement nDownloads = null;
+                        if (nDownloadsList.Length > 1)
                         {
-                            if (nDownloadable.InnerHtml == "\n" || nDownloadable.InnerHtml.Length == 0) continue;
-                            var dp = new DownloadableProduct();
-                            dp.Name = nDownloadable.QuerySelector(":scope > h3").TextContent;
-                            dp.Files = ParseFiles(nDownloadable);
-                            //if (dp.Files.Count == 0) System.Diagnostics.Debugger.Break();
-                            p.Downloads.Add(dp);
+                            Console.WriteLine($"Product {p.ProductName} has multiple download containers!");
                         }
-                        // Games/music
-                        nDownloadables = nDownloads.QuerySelectorAll(".row > .col-sm-2");
-                        foreach (var nDownloadable in nDownloadables)
+                        else if (nDownloadsList.Length == 1)
                         {
-                            if (nDownloadable.InnerHtml == "\n" || nDownloadable.InnerHtml.Length == 0) continue;
-                            var dp = new DownloadableProduct();
-                            dp.Files = ParseFiles(nDownloadable);
-                            //if (dp.Files.Count == 0) System.Diagnostics.Debugger.Break();
-                            p.Downloads.Add(dp);
+                            nDownloads = nDownloadsList[0];
                         }
 
-                        // Tracks
-                        var nTracks = nDownloads.QuerySelector(".track-list");
-                        if (nTracks != null)
+                        if (nDownloads != null && nDownloads.InnerHtml != "\n" && nDownloads.InnerHtml.Length != 0)
                         {
-                            foreach (var nTrack in nTracks.Children)
+                            // Keys
+                            var nKeys = nDetails.QuerySelector("ul.keys");
+                            if (nKeys != null)
                             {
-                                var t = new Track();
-                                var nFav = nTrack.GetSingleByClassName("favorite-star");
-                                t.Id = int.Parse(nFav.GetAttribute("data-track-id"));
-                                t.IsFavorite = nDetails.GetSingleByClassName("favorite-star").HasClassName("favorite");
-                                t.Name = nTrack.QuerySelector(":scope > span").TextContent;
-                                p.Tracks.Add(t);
+                                foreach (var nKey in nKeys.QuerySelectorAll(":scope > .key"))
+                                {
+                                    Key k = new Key();
+                                    k.Id = int.Parse(nKey.GetAttribute("data-id"));
+                                    k.PlatformName = nKey.QuerySelector(":scope > strong").TextContent;
+                                    k.IsThirdParty = nKey.InnerHtml.Contains("(3rd Party Key)");
+
+                                    var nKeyMeta = nKey.GetSingleByClassName("key-meta");
+                                    var nKeyUsed = nKeyMeta.QuerySelector(".usage");
+                                    if (nKeyUsed != null)
+                                    {
+                                        k.IsUsed = nKeyUsed.HasAttribute("checked");
+                                        k.IsTradedOut = false;
+                                    }
+                                    else
+                                    {
+                                        string text = nKeyMeta.TextContent;
+                                        if (text.Contains("Traded out"))
+                                            k.IsTradedOut = true;
+                                        else if (text.Contains("Potentially not revealed"))
+                                            k.IsPotentiallyNotRevealed = true;
+                                        else if (text.Contains("Redeemed"))
+                                            k.IsUsed = true;
+                                        else if (text.Contains("Givenaway"))
+                                            k.IsGiveawayed = true;
+                                        else if (!text.Contains("Not revealed") && !text.Contains("Set for trade") && !text.Contains("Available in Giveaways"))
+                                            throw new ParsingException($"Key meta contains unknown text: {text}", nKey.OuterHtml);
+                                    }
+
+                                    var nKeyUnrevealedGroup = nKey.GetSingleOrDefaultByClassName("unrevealed-group");
+                                    if (nKeyUnrevealedGroup != null)
+                                    {
+                                        var nKeyUnrevealedButtons = nKeyUnrevealedGroup.GetSingleByClassName("input-group-btn");
+                                        var giveawayButton = nKeyUnrevealedButtons.GetSingleOrDefaultByClassName("giveaway");
+                                        var tradeButton = nKeyUnrevealedButtons.GetSingleOrDefaultByClassName("trades");
+                                        if (giveawayButton != null)
+                                        {
+                                            k.IsSetForGiveaway = giveawayButton.HasClassName("active");
+                                            if (k.IsSetForGiveaway)
+                                                k.GiveawayId = int.Parse(giveawayButton.GetAttribute("data-id"));
+                                            else
+                                                k.GiveawayId = null;
+                                        }
+                                        else
+                                        {
+                                            k.IsSetForGiveaway = false;
+                                            k.GiveawayId = null;
+                                        }
+                                        if (tradeButton != null)
+                                        {
+                                            k.IsSetForTrade = tradeButton.HasClassName("active");
+                                            if (k.IsSetForTrade)
+                                                k.TradeId = int.Parse(tradeButton.GetAttribute("data-id"));
+                                            else
+                                                k.TradeId = null;
+                                        }
+                                        else
+                                        {
+                                            k.IsSetForTrade = false;
+                                            k.TradeId = null;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        k.IsRevealed = true;
+                                        var nKeyRevealedGroup = nKey.GetSingleOrDefaultByClassName("revealed-group");
+                                        k.Code = nKeyRevealedGroup.QuerySelector(".code").GetAttribute("value");
+                                    }
+
+                                    p.Keys.Add(k);
+                                }
+                            }
+
+                            // Downloads
+                            // Comics/other products
+                            var nDownloadables = nDownloads.QuerySelectorAll(".row > .col-sm-3");
+                            foreach (var nDownloadable in nDownloadables)
+                            {
+                                if (nDownloadable.InnerHtml == "\n" || nDownloadable.InnerHtml.Length == 0) continue;
+                                var dp = new DownloadableProduct();
+                                dp.Name = nDownloadable.QuerySelector(":scope > h3").TextContent;
+                                dp.Files = ParseFiles(nDownloadable);
+                                //if (dp.Files.Count == 0) System.Diagnostics.Debugger.Break();
+                                p.Downloads.Add(dp);
+                            }
+                            // Games/music
+                            nDownloadables = nDownloads.QuerySelectorAll(".row > .col-sm-2");
+                            foreach (var nDownloadable in nDownloadables)
+                            {
+                                if (nDownloadable.InnerHtml == "\n" || nDownloadable.InnerHtml.Length == 0) continue;
+                                var dp = new DownloadableProduct();
+                                dp.Files = ParseFiles(nDownloadable);
+                                //if (dp.Files.Count == 0) System.Diagnostics.Debugger.Break();
+                                p.Downloads.Add(dp);
+                            }
+
+                            // Tracks
+                            var nTracks = nDownloads.QuerySelector(".track-list");
+                            if (nTracks != null)
+                            {
+                                foreach (var nTrack in nTracks.Children)
+                                {
+                                    var t = new Track();
+                                    var nFav = nTrack.GetSingleByClassName("favorite-star");
+                                    t.Id = int.Parse(nFav.GetAttribute("data-track-id"));
+                                    t.IsFavorite = nDetails.GetSingleByClassName("favorite-star").HasClassName("favorite");
+                                    t.Name = nTrack.QuerySelector(":scope > span").TextContent;
+                                    p.Tracks.Add(t);
+                                }
                             }
                         }
                     }

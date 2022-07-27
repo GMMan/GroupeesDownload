@@ -34,6 +34,7 @@ namespace GroupeesDownload
                     bool anyUnrevealed = false;
                     foreach (var product in bundle.Products)
                     {
+                        if (product.Id == -1) continue;
                         if (!product.IsRevealed && !product.IsGiveawayed && !product.IsSetForTrade)
                         {
                             anyUnrevealed = true;
@@ -54,6 +55,7 @@ namespace GroupeesDownload
                 for (int i = 0; i < tradeProducts.Count; ++i)
                 {
                     var product = tradeProducts[i];
+                    if (product.Id == -1) continue;
                     if (!product.IsRevealed && !product.IsGiveawayed && !product.IsSetForTrade)
                     {
                         Console.WriteLine($"Revealing {product.ProductName}");
@@ -75,6 +77,7 @@ namespace GroupeesDownload
                     bool anyTraded = false;
                     foreach (var product in bundle.Products)
                     {
+                        if (product.Id == -1) continue;
                         if (product.IsSetForTrade)
                         {
                             anyTraded = true;
@@ -105,6 +108,7 @@ namespace GroupeesDownload
                 for (int i = 0; i < tradeProducts.Count; ++i)
                 {
                     var product = tradeProducts[i];
+                    if (product.Id == -1) continue;
                     bool anyTraded = false;
 
                     if (product.IsSetForTrade)
@@ -151,6 +155,7 @@ namespace GroupeesDownload
                     bool anyGiveawayed = false;
                     foreach (var product in bundle.Products)
                     {
+                        if (product.Id == -1) continue;
                         if (product.IsSetForGiveaway)
                         {
                             anyGiveawayed = true;
@@ -181,6 +186,7 @@ namespace GroupeesDownload
                 for (int i = 0; i < tradeProducts.Count; ++i)
                 {
                     var product = tradeProducts[i];
+                    if (product.Id == -1) continue;
                     bool anyGiveawayed = false;
 
                     if (product.IsSetForGiveaway)
@@ -370,7 +376,7 @@ namespace GroupeesDownload
         {
             List<string> export = new List<string>();
             // Header
-            export.Add("Bundle name,Product name,Platform,Code,Used");
+            export.Add("Bundle name,Product name,Platform,Code,Used,Third party");
 
             if (bundles != null)
             {
@@ -399,7 +405,7 @@ namespace GroupeesDownload
             List<string> export = new List<string>();
             foreach (var key in product.Keys)
             {
-                export.Add($"\"{bundle?.BundleName ?? string.Empty}\",\"{product.ProductName}\",\"{key.PlatformName}\",\"{(key.IsRevealed ? key.Code : "<not revealed>")}\",{key.IsUsed}");
+                export.Add($"\"{bundle?.BundleName ?? string.Empty}\",\"{product.ProductName}\",\"{key.PlatformName}\",\"{(key.IsRevealed ? key.Code : $"<{(key.IsPotentiallyNotRevealed ? "potentially " : string.Empty)}not revealed>")}\",{key.IsUsed},{key.IsThirdParty}");
             }
             return export;
         }

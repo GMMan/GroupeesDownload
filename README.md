@@ -143,15 +143,3 @@ GroupeesDownload.exe export-keys
 
 This will export all keys to `keys.csv`. Use the `--output` option
 if you would like the file saved somewhere else.
-
-TODOs
------
-- Handle giveaway detection
-- Try to remove from trade with trades site instead of main site (main site
-  seems a bit buggy)
-
-Help wanted
------------
-I don't have any unrevealed products/keys in my account anymore, so I need
-someone's help to get the HTML from the new profile so I can parse how those
-things work, for the purposes of scraping products obtained from trading.
