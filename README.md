@@ -26,7 +26,7 @@ log in, open up the developer console in your browser
 ```js
 const userId = document.body.querySelector('.fayepub').getAttribute('data-user');
 const csrfToken = document.getElementsByName('csrf-token')[0].getAttribute('content');
-console.log('--userId ' + userId + ' --csrf-token "' + csrfToken + '"');
+console.log('--user-id ' + userId + ' --csrf-token "' + csrfToken + '"');
 ```
 
 This will print the user ID and CSRF token that you can pass to the program.
