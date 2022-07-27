@@ -5,7 +5,12 @@ This program is designed to scrape a copy of your Groupees account, including
 bundles, products, keys, and various download links. To help with archival, it
 can automatically remove items from trade or giveaway, and automatically
 reveal all products and keys. A download list can be generated that includes
-both product files and covers.
+both product files and covers (with extended support for Aria2), and you can
+also export a spreadsheet of all your keys.
+
+If you've found this useful, please consider tipping me on [Ko-Fi](https://ko-fi.com/caralynx).
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C81P4PX)
 
 Tutorial
 --------
