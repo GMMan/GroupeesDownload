@@ -141,7 +141,7 @@ this:
 GroupeesDownload.exe export-keys
 ```
 
-This will export all links to `keys.csv`. Use the `--output` option
+This will export all keys to `keys.csv`. Use the `--output` option
 if you would like the file saved somewhere else.
 
 TODOs
