@@ -12,6 +12,9 @@ namespace GroupeesDownload
 {
     class Program
     {
+        const string DEFAULT_BUNDLES_DB_NAME = "bundles.json";
+        const string DEFAULT_TRADES_DB_NAME = "trades.json";
+
         static Client client;
         static Scraper scraper;
         static JsonSerializerOptions serOpts = new JsonSerializerOptions { WriteIndented = true };
@@ -21,8 +24,8 @@ namespace GroupeesDownload
             var userIdOption = new Option<int>("--user-id", "The user ID.");
             var cookieOption = new Option<string>("--cookie", "The value of the _groupees_session cookie.");
             var csrfTokenOption = new Option<string>("--csrf-token", "The CSRF token value.");
-            var bundlesDbOption = new Option<FileInfo>("--bundles-db", () => new FileInfo("bundles.json"), "Path to bundle DB.");
-            var tradesDbOption = new Option<FileInfo>("--trades-db", () => new FileInfo("trades.json"), "Path to trades DB.");
+            var bundlesDbOption = new Option<FileInfo>("--bundles-db", () => new FileInfo(DEFAULT_BUNDLES_DB_NAME), "Path to bundle DB.");
+            var tradesDbOption = new Option<FileInfo>("--trades-db", () => new FileInfo(DEFAULT_TRADES_DB_NAME), "Path to trades DB.");
             var allOption = new Option<bool>("--all", "Apply action to all items of this type.");
             var noCoversOption = new Option<bool>("--no-covers", "Do not include covers in list.");
             var outputOption = new Option<FileInfo>("--output", "Path to output list to.");
@@ -316,6 +319,7 @@ namespace GroupeesDownload
             }
             catch (FileNotFoundException)
             {
+                if (tradesDb.Name != DEFAULT_TRADES_DB_NAME) throw;
                 return null;
             }
         }
