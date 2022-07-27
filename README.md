@@ -58,8 +58,6 @@ This will save the metadata of all the products you've received from trades to
 a file named `trades.json` in the current working directory. Similar to,
 bundles, you can change this name by specifying the `--trades-db` option.
 
-**You may have to reobtain tokens for the trades site specifically.**
-
 Note: it is currently unknown how the program behaves when it encounters a
 traded bundle, since I don't have any in my account. If you encounter issues,
 please file an issue.
@@ -86,7 +84,7 @@ If your databases are on a different path, specify `--bundles-db` and
 `--trades-db` as needed.
 
 If you want to apply the action to only certain items, replace `--all` with
-a space separated list of trade/giveaway/product IDs (find them from your DB
+a space-separated list of trade/giveaway/product IDs (find them from your DB
 files). Your databases will not be automatically updated, so make sure to
 redump them using earlier commands.
 
@@ -108,6 +106,9 @@ if you would like the file saved somewhere else.
 There may be duplicate links if you have obtained a product multiple times.
 Cover images are also included. If you don't care for them, specify the
 `--no-covers` option.
+
+By default for music, if FLAC files are available, they will be chosen instead
+of MP3 files. If you want both, add the "--include-all" option.
 
 You can use your favorite downloads manager to import these links. Note that
 the download manager must support cookies or custom headers so you can

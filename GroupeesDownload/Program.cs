@@ -29,7 +29,8 @@ namespace GroupeesDownload
             var allOption = new Option<bool>("--all", "Apply action to all items of this type.");
             var noCoversOption = new Option<bool>("--no-covers", "Do not include covers in list.");
             var outputOption = new Option<FileInfo>("--output", "Path to output list to.");
-            var useDirsOption = new Option<bool>("--use-dirs", "Split downloads into directories by bundle name (for use with aria2)");
+            var useDirsOption = new Option<bool>("--use-dirs", "Split downloads into directories by bundle name (for use with aria2).");
+            var includeAllOption = new Option<bool>("--include-all", "Also include MP3s even if FLAC is available when downloading music.");
             var idsArgument = new Argument<int[]>("ids", "IDs of items to act upon.");
 
             var rootCommand = new RootCommand("Groupees Scraper");
@@ -107,6 +108,7 @@ namespace GroupeesDownload
                 noCoversOption,
                 outputOption,
                 useDirsOption,
+                includeAllOption,
             };
             rootCommand.Add(generateLinksCommand);
 
@@ -208,17 +210,17 @@ namespace GroupeesDownload
                 if (accManage.TradeProducts != null) SaveTrades(tradesDb, accManage.TradeProducts);
             }, userIdOption, cookieOption, csrfTokenOption, bundlesDbOption, tradesDbOption, allOption, idsArgument);
 
-            generateLinksCommand.SetHandler((bundlesDb, tradesDb, noCovers, output, useDirs) =>
+            generateLinksCommand.SetHandler((bundlesDb, tradesDb, noCovers, output, useDirs, includeAll) =>
             {
                 var bundles = LoadBundles(bundlesDb);
                 var tradeProducts = LoadTrades(tradesDb);
                 AccountManagement accManage = new AccountManagement(client, scraper, bundles, tradeProducts);
 
-                var downloadsList = accManage.GenerateDownloadsList(!noCovers, useDirs);
+                var downloadsList = accManage.GenerateDownloadsList(!noCovers, useDirs, includeAll);
 
                 if (output == null) output = new FileInfo("downloads_list.txt");
                 File.WriteAllLines(output.FullName, downloadsList);
-            }, bundlesDbOption, tradesDbOption, noCoversOption, outputOption, useDirsOption);
+            }, bundlesDbOption, tradesDbOption, noCoversOption, outputOption, useDirsOption, includeAllOption);
 
             exportKeysCommand.SetHandler((bundlesDb, tradesDb, output) =>
             {

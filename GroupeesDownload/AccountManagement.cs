@@ -285,7 +285,7 @@ namespace GroupeesDownload
             }
         }
 
-        public List<string> GenerateDownloadsList(bool includeCover, bool useAria2Folders)
+        public List<string> GenerateDownloadsList(bool includeCover, bool useAria2Folders, bool includeAll)
         {
             List<string> list = new List<string>();
 
@@ -300,7 +300,7 @@ namespace GroupeesDownload
                     }
                     foreach (var product in bundle.Products)
                     {
-                        list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append));
+                        list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, includeAll));
                     }
                 }
             }
@@ -314,14 +314,14 @@ namespace GroupeesDownload
                 }
                 foreach (var product in tradeProducts)
                 {
-                    list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append));
+                    list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, includeAll));
                 }
             }
 
             return list;
         }
 
-        public List<string> GenerateDownloadsListForProduct(Product product, bool includeCover, string append)
+        public List<string> GenerateDownloadsListForProduct(Product product, bool includeCover, string append, bool includeAll)
         {
             List<string> list = new List<string>();
 
@@ -333,7 +333,7 @@ namespace GroupeesDownload
             }
 
             // Is this music?
-            if (product.Tracks.Count != 0)
+            if (product.Tracks.Count != 0 && !includeAll)
             {
                 foreach (var download in product.Downloads)
                 {
