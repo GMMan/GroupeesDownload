@@ -147,7 +147,7 @@ namespace GroupeesDownload
             p.CoverUrl = "https://groupees.com" + nCell.GetSingleByClassName("product-cover").GetAttribute("src");
             p.ProductName = nCell.QuerySelector("h4").GetAttribute("title");
             var nTransmittedInfo = nCell.GetSingleOrDefaultByClassName("transmitted-info");
-            if (nTransmittedInfo != null)
+            if (nTransmittedInfo != null && !nTransmittedInfo.HasClassName("hidden"))
             {
                 var text = nTransmittedInfo.GetSingleByClassName("h4").TextContent;
                 if (text.Contains("Givenaway"))
