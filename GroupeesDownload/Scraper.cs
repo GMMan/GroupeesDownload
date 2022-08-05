@@ -330,6 +330,7 @@ namespace GroupeesDownload
                 {
                     string url = row.QuerySelector(":scope > .item-title-cell > a").GetAttribute("href");
                     if (url.EndsWith("coins")) continue;
+                    if (url.Contains("/purchases/")) continue; // Should be picked up by bundles scrape
                     ids.Add(int.Parse(url.Substring(url.LastIndexOf("/") + 1)));
                 }
             }
