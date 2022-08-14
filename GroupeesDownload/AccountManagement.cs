@@ -230,13 +230,31 @@ namespace GroupeesDownload
             {
                 foreach (var bundle in bundles)
                 {
+                    if (bundle.IsSetForGiveaway || bundle.IsSetForTrade || bundle.IsGiveawayed || bundle.IsTradedOut)
+                    {
+                        Console.WriteLine($"Bundle {bundle.BundleName} skipped because marked for/has been giveawayed or traded");
+                        continue;
+                    }
+
                     bool anyUnrevealed = false;
                     foreach (var product in bundle.Products)
                     {
+                        if (product.IsSetForGiveaway || product.IsSetForTrade || product.IsGiveawayed || product.IsTradedOut)
+                        {
+                            Console.WriteLine($"Product {product.ProductName} in {bundle.BundleName} skipped because marked for/has been giveawayed or traded");
+                            continue;
+                        }
+
                         foreach (var key in product.Keys)
                         {
-                            if (!key.IsRevealed && !key.IsGiveawayed && !key.IsTradedOut)
+                            if (!key.IsRevealed)
                             {
+                                if (key.IsSetForGiveaway || key.IsSetForTrade || key.IsGiveawayed || key.IsTradedOut)
+                                {
+                                    Console.WriteLine($"Key {key.PlatformName} for {product.ProductName} in {bundle.BundleName} skipped because marked for/has been giveawayed or traded");
+                                    continue;
+                                }
+
                                 anyUnrevealed = true;
                                 Console.WriteLine($"Revealing key {key.PlatformName} for {product.ProductName} from {bundle.BundleName}");
                                 await client.RevealKey(key.Id);
@@ -258,10 +276,22 @@ namespace GroupeesDownload
                     bool anyUnrevealed = false;
                     var product = tradeProducts[i];
 
+                    if (product.IsSetForGiveaway || product.IsSetForTrade || product.IsGiveawayed || product.IsTradedOut)
+                    {
+                        Console.WriteLine($"Traded product {product.ProductName} skipped because marked for/has been giveawayed or traded");
+                        continue;
+                    }
+
                     foreach (var key in product.Keys)
                     {
                         if (!key.IsRevealed && !key.IsGiveawayed && !key.IsTradedOut)
                         {
+                            if (key.IsSetForGiveaway || key.IsSetForTrade || key.IsGiveawayed || key.IsTradedOut)
+                            {
+                                Console.WriteLine($"Key {key.PlatformName} for traded product {product.ProductName} skipped because marked for/has been giveawayed or traded");
+                                continue;
+                            }
+
                             anyUnrevealed = true;
                             Console.WriteLine($"Revealing key {key.PlatformName} for {product.ProductName}");
                             await client.RevealKey(key.Id);
