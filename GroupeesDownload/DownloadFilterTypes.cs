@@ -11,6 +11,7 @@ namespace GroupeesDownload
         Games = 1 << 0,
         Music = 1 << 1,
         Others = 1 << 2,
-        All = Games | Music | Others
+        All = Games | Music | Others,
+        MusicDownloadAll = 1 << 3,
     }
 }

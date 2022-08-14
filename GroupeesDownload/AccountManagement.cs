@@ -315,7 +315,7 @@ namespace GroupeesDownload
             }
         }
 
-        public List<string> GenerateDownloadsList(bool includeCover, bool useAria2Folders, bool includeAll, DownloadFilterTypes filter, bool dedupe)
+        public List<string> GenerateDownloadsList(bool includeCover, bool useAria2Folders, DownloadFilterTypes filter, bool dedupe)
         {
             List<string> list = new List<string>();
             HashSet<string> seenUrls = dedupe ? new HashSet<string>() : null;
@@ -331,7 +331,7 @@ namespace GroupeesDownload
                     }
                     foreach (var product in bundle.Products)
                     {
-                        list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, includeAll, filter, seenUrls));
+                        list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, filter, seenUrls));
                     }
                 }
             }
@@ -345,18 +345,18 @@ namespace GroupeesDownload
                 }
                 foreach (var product in tradeProducts)
                 {
-                    list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, includeAll, filter, seenUrls));
+                    list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, filter, seenUrls));
                 }
             }
 
             return list;
         }
 
-        public List<string> GenerateDownloadsListForProduct(Product product, bool includeCover, string append, bool includeAll, DownloadFilterTypes filter, HashSet<string> seenUrls)
+        public List<string> GenerateDownloadsListForProduct(Product product, bool includeCover, string append, DownloadFilterTypes filter, HashSet<string> seenUrls)
         {
             List<string> list = new List<string>();
 
-            if (filter != DownloadFilterTypes.All)
+            if ((filter & DownloadFilterTypes.All) != DownloadFilterTypes.All)
             {
                 if (product.Tracks.Count != 0)
                 {
@@ -386,7 +386,7 @@ namespace GroupeesDownload
             }
 
             // Is this music?
-            if (product.Tracks.Count != 0 && !includeAll)
+            if (product.Tracks.Count != 0 && (filter & DownloadFilterTypes.MusicDownloadAll) == 0)
             {
                 foreach (var download in product.Downloads)
                 {

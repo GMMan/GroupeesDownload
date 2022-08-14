@@ -246,8 +246,9 @@ namespace GroupeesDownload
                 {
                     filter = DownloadFilterTypes.All;
                 }
+                if (includeAll) filter |= DownloadFilterTypes.MusicDownloadAll;
 
-                var downloadsList = accManage.GenerateDownloadsList(!noCovers, useDirs, includeAll, filter, dedupe);
+                var downloadsList = accManage.GenerateDownloadsList(!noCovers, useDirs, filter, dedupe);
 
                 if (output == null) output = new FileInfo("downloads_list.txt");
                 File.WriteAllLines(output.FullName, downloadsList);
