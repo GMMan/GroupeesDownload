@@ -34,6 +34,7 @@ namespace GroupeesDownload
             var filterGamesOption = new Option<bool>("--filter-games", "Filter downloads to games.");
             var filterMusicOption = new Option<bool>("--filter-music", "Filter downloads to music.");
             var filterOthersOption = new Option<bool>("--filter-others", "Filter downloads to other products (e.g. comics).");
+            var dedupeOption = new Option<bool>("--dedupe", "Deduplicate download links based on URL.");
             var idsArgument = new Argument<int[]>("ids", "IDs of items to act upon.");
 
             var rootCommand = new RootCommand("Groupees Scraper");
@@ -115,6 +116,7 @@ namespace GroupeesDownload
                 filterMusicOption,
                 filterGamesOption,
                 filterOthersOption,
+                dedupeOption,
             };
             rootCommand.Add(generateLinksCommand);
 
@@ -227,6 +229,7 @@ namespace GroupeesDownload
                 var filterGames = context.ParseResult.GetValueForOption(filterGamesOption);
                 var filterMusic = context.ParseResult.GetValueForOption(filterMusicOption);
                 var filterOthers = context.ParseResult.GetValueForOption(filterOthersOption);
+                var dedupe = context.ParseResult.GetValueForOption(dedupeOption);
 
                 var bundles = LoadBundles(bundlesDb);
                 var tradeProducts = LoadTrades(tradesDb);
@@ -244,7 +247,7 @@ namespace GroupeesDownload
                     filter = DownloadFilterTypes.All;
                 }
 
-                var downloadsList = accManage.GenerateDownloadsList(!noCovers, useDirs, includeAll, filter);
+                var downloadsList = accManage.GenerateDownloadsList(!noCovers, useDirs, includeAll, filter, dedupe);
 
                 if (output == null) output = new FileInfo("downloads_list.txt");
                 File.WriteAllLines(output.FullName, downloadsList);

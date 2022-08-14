@@ -315,9 +315,10 @@ namespace GroupeesDownload
             }
         }
 
-        public List<string> GenerateDownloadsList(bool includeCover, bool useAria2Folders, bool includeAll, DownloadFilterTypes filter)
+        public List<string> GenerateDownloadsList(bool includeCover, bool useAria2Folders, bool includeAll, DownloadFilterTypes filter, bool dedupe)
         {
             List<string> list = new List<string>();
+            HashSet<string> seenUrls = dedupe ? new HashSet<string>() : null;
 
             if (bundles != null)
             {
@@ -330,7 +331,7 @@ namespace GroupeesDownload
                     }
                     foreach (var product in bundle.Products)
                     {
-                        list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, includeAll, filter));
+                        list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, includeAll, filter, seenUrls));
                     }
                 }
             }
@@ -344,14 +345,14 @@ namespace GroupeesDownload
                 }
                 foreach (var product in tradeProducts)
                 {
-                    list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, includeAll, filter));
+                    list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, includeAll, filter, seenUrls));
                 }
             }
 
             return list;
         }
 
-        public List<string> GenerateDownloadsListForProduct(Product product, bool includeCover, string append, bool includeAll, DownloadFilterTypes filter)
+        public List<string> GenerateDownloadsListForProduct(Product product, bool includeCover, string append, bool includeAll, DownloadFilterTypes filter, HashSet<string> seenUrls)
         {
             List<string> list = new List<string>();
 
@@ -403,8 +404,12 @@ namespace GroupeesDownload
                     else
                     {
                         //Console.WriteLine($"Music {product.ProductName}: picked {bestFile.PlatformName} from {string.Join(", ", download.Files.Select(x => x.PlatformName))}");
-                        list.Add(bestFile.Url);
-                        if (append != null) list.Add(append);
+                        if (seenUrls == null || !seenUrls.Contains(bestFile.Url))
+                        {
+                            list.Add(bestFile.Url);
+                            if (append != null) list.Add(append);
+                            if (seenUrls != null) seenUrls.Add(bestFile.Url);
+                        }
                     }
                 }
             }
@@ -415,8 +420,12 @@ namespace GroupeesDownload
                     // Queue everything
                     foreach (var file in download.Files)
                     {
-                        list.Add(file.Url);
-                        if (append != null) list.Add(append);
+                        if (seenUrls == null || !seenUrls.Contains(file.Url))
+                        {
+                            list.Add(file.Url);
+                            if (append != null) list.Add(append);
+                            if (seenUrls != null) seenUrls.Add(file.Url);
+                        }
                     }
                 }
             }
