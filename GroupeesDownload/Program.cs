@@ -31,6 +31,9 @@ namespace GroupeesDownload
             var outputOption = new Option<FileInfo>("--output", "Path to output list to.");
             var useDirsOption = new Option<bool>("--use-dirs", "Split downloads into directories by bundle name (for use with aria2).");
             var includeAllOption = new Option<bool>("--include-all", "Also include MP3s even if FLAC is available when downloading music.");
+            var filterGamesOption = new Option<bool>("--filter-games", "Filter downloads to games.");
+            var filterMusicOption = new Option<bool>("--filter-music", "Filter downloads to music.");
+            var filterOthersOption = new Option<bool>("--filter-others", "Filter downloads to other products (e.g. comics).");
             var idsArgument = new Argument<int[]>("ids", "IDs of items to act upon.");
 
             var rootCommand = new RootCommand("Groupees Scraper");
@@ -109,6 +112,9 @@ namespace GroupeesDownload
                 outputOption,
                 useDirsOption,
                 includeAllOption,
+                filterMusicOption,
+                filterGamesOption,
+                filterOthersOption,
             };
             rootCommand.Add(generateLinksCommand);
 
@@ -210,17 +216,39 @@ namespace GroupeesDownload
                 if (accManage.TradeProducts != null) SaveTrades(tradesDb, accManage.TradeProducts);
             }, userIdOption, cookieOption, csrfTokenOption, bundlesDbOption, tradesDbOption, allOption, idsArgument);
 
-            generateLinksCommand.SetHandler((bundlesDb, tradesDb, noCovers, output, useDirs, includeAll) =>
+            generateLinksCommand.SetHandler(context =>
             {
+                var bundlesDb = context.ParseResult.GetValueForOption(bundlesDbOption);
+                var tradesDb = context.ParseResult.GetValueForOption(tradesDbOption);
+                var noCovers = context.ParseResult.GetValueForOption(noCoversOption);
+                var output = context.ParseResult.GetValueForOption(outputOption);
+                var useDirs = context.ParseResult.GetValueForOption(useDirsOption);
+                var includeAll = context.ParseResult.GetValueForOption(includeAllOption);
+                var filterGames = context.ParseResult.GetValueForOption(filterGamesOption);
+                var filterMusic = context.ParseResult.GetValueForOption(filterMusicOption);
+                var filterOthers = context.ParseResult.GetValueForOption(filterOthersOption);
+
                 var bundles = LoadBundles(bundlesDb);
                 var tradeProducts = LoadTrades(tradesDb);
                 AccountManagement accManage = new AccountManagement(client, scraper, bundles, tradeProducts);
 
-                var downloadsList = accManage.GenerateDownloadsList(!noCovers, useDirs, includeAll);
+                DownloadFilterTypes filter = DownloadFilterTypes.None;
+                if (filterGames || filterMusic || filterOthers)
+                {
+                    if (filterGames) filter |= DownloadFilterTypes.Games;
+                    if (filterMusic) filter |= DownloadFilterTypes.Music;
+                    if (filterOthers) filter |= DownloadFilterTypes.Others;
+                }
+                else
+                {
+                    filter = DownloadFilterTypes.All;
+                }
+
+                var downloadsList = accManage.GenerateDownloadsList(!noCovers, useDirs, includeAll, filter);
 
                 if (output == null) output = new FileInfo("downloads_list.txt");
                 File.WriteAllLines(output.FullName, downloadsList);
-            }, bundlesDbOption, tradesDbOption, noCoversOption, outputOption, useDirsOption, includeAllOption);
+            });
 
             exportKeysCommand.SetHandler((bundlesDb, tradesDb, output) =>
             {

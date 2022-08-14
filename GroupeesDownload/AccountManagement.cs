@@ -285,7 +285,7 @@ namespace GroupeesDownload
             }
         }
 
-        public List<string> GenerateDownloadsList(bool includeCover, bool useAria2Folders, bool includeAll)
+        public List<string> GenerateDownloadsList(bool includeCover, bool useAria2Folders, bool includeAll, DownloadFilterTypes filter)
         {
             List<string> list = new List<string>();
 
@@ -300,7 +300,7 @@ namespace GroupeesDownload
                     }
                     foreach (var product in bundle.Products)
                     {
-                        list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, includeAll));
+                        list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, includeAll, filter));
                     }
                 }
             }
@@ -314,16 +314,38 @@ namespace GroupeesDownload
                 }
                 foreach (var product in tradeProducts)
                 {
-                    list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, includeAll));
+                    list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, includeAll, filter));
                 }
             }
 
             return list;
         }
 
-        public List<string> GenerateDownloadsListForProduct(Product product, bool includeCover, string append, bool includeAll)
+        public List<string> GenerateDownloadsListForProduct(Product product, bool includeCover, string append, bool includeAll, DownloadFilterTypes filter)
         {
             List<string> list = new List<string>();
+
+            if (filter != DownloadFilterTypes.All)
+            {
+                if (product.Tracks.Count != 0)
+                {
+                    // Music
+                    if ((filter & DownloadFilterTypes.Music) == 0) return list;
+                }
+                else
+                {
+                    if (product.Downloads.Count == 1 && product.Downloads[0].Name == null)
+                    {
+                        // Game, presumably
+                        if ((filter & DownloadFilterTypes.Games) == 0) return list;
+                    }
+                    else
+                    {
+                        // Other products
+                        if ((filter & DownloadFilterTypes.Others) == 0) return list;
+                    }
+                }
+            }
 
             // Cover
             if (includeCover && product.CoverUrl != null)
