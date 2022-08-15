@@ -553,6 +553,11 @@ namespace GroupeesDownload
             {
                 export.Add($"\"{bundle?.BundleName ?? string.Empty}\",\"{product.ProductName}\",\"{key.PlatformName}\",\"{(key.IsRevealed ? key.Code : $"<{(key.IsPotentiallyNotRevealed ? "potentially " : string.Empty)}not revealed>")}\",{key.IsUsed},{key.IsThirdParty}");
             }
+            if (product.IsOwnThirdPartyKey && product.Keys.Count == 0)
+            {
+                // Own third party keys don't show a key if not revealed, so insert a placeholder entry
+                export.Add($"\"\",\"{product.ProductName}\",\"Third Party Key\",\"<not revealed>\",false,true");
+            }
             return export;
         }
 
