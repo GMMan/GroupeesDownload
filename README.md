@@ -62,6 +62,25 @@ Note: it is currently unknown how the program behaves when it encounters a
 traded bundle, since I don't have any in my account. If you encounter issues,
 please file an issue.
 
+### Dumping your own third party keys
+
+You can also export third party keys you have added.
+
+```
+GroupeesDownload.exe dump-third-party-keys <tokens>
+```
+
+Please make sure to specify your bundles DB path and trades DB path if you are
+not using the defaults, otherwise due to how Groupees exposes information,
+all products in your account will be enumerated instead of just the ones that
+have not already been dumped.
+
+The dump of your third party key products will be saved to `third_party_keys.json`
+by default.
+
+Note that third party keys work like any other key, and will not be visible
+until revealed.
+
 ### Unmarking trades, giveaways, and revealing products and keys
 
 You can unmark from trades and giveaways, and reveal products and keys
@@ -82,6 +101,10 @@ automatically updated with refreshed bundle/product data.
 
 If your databases are on a different path, specify `--bundles-db` and
 `--trades-db` as needed.
+
+The actions are only applied to bundles and trades, or third party keys. To
+apply actions to third party keys, specify `--tpk-db` if you are not using
+the default third party key DB path, and then specify `--for-tpk`.
 
 If you want to apply the action to only certain items, replace `--all` with
 a space-separated list of trade/giveaway/product IDs (find them from your DB
@@ -104,18 +127,35 @@ This will export all links to `downloads_list.txt`. Use the `--output` option
 if you would like the file saved somewhere else.
 
 There may be duplicate links if you have obtained a product multiple times.
+You can remove them with the `--dedupe` option.
+
 Cover images are also included. If you don't care for them, specify the
 `--no-covers` option.
 
+If you want to only generate links for certain types of products, you can mix
+and match the following options:
+
+- `--filter-games`: include games
+- `--filter-music`: include music
+- `--filter-others`: include anything that's not games or music
+
+If you do not specify one of the above options, all links will be added to
+list.
+
 By default for music, if FLAC files are available, they will be chosen instead
-of MP3 files. If you want both, add the "--include-all" option.
+of MP3 files. If you want both, add the `--include-all` option.
 
 You can use your favorite downloads manager to import these links. Note that
 the download manager must support cookies or custom headers so you can
 authenticate with the storage server. I use [aria2c](https://aria2.github.io/).
 
-If you are using aria2, you can also specify the `--use-dirs` option to have
-all files automatically placed into directories named after their bundle name.
+If you are using aria2, you can also specify how to place files into
+directories. The `--organize` option takes the following values:
+
+- `BundleOnly`: only sorts files by bundle
+- `BundleAndProduct`: sorts file by bundle, then by product name
+- `BundleAndType`: sorts files by bundle, then by product type (games,
+  music, android, books, movies, others)
 
 aria2c example:
 
