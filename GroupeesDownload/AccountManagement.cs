@@ -1,6 +1,7 @@
 ﻿using GroupeesDownload.Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,6 +10,15 @@ namespace GroupeesDownload
 {
     public class AccountManagement
     {
+        static readonly Dictionary<string, string[]> CATEGORY_MAP = new Dictionary<string, string[]>
+        {
+            ["music"] = new[] { "mp3", "flac" },
+            ["games"] = new[] { "pc", "os x" },
+            ["books"] = new[] { "pdf", "cbz", "epub", "mobi", "cbr" },
+            ["movies"] = new[] { "mp4", "mov", "m4v", "scc", "srt" },
+            ["android"] = new[] { "apk", "android" },
+        };
+
         Client client;
         Scraper scraper;
         List<Bundle> bundles;
@@ -31,12 +41,24 @@ namespace GroupeesDownload
             {
                 foreach (var bundle in bundles)
                 {
+                    if (bundle.IsSetForGiveaway || bundle.IsSetForTrade || bundle.IsGiveawayed || bundle.IsTradedOut)
+                    {
+                        Console.WriteLine($"Bundle {bundle.BundleName} skipped because marked for/has been giveawayed or traded");
+                        continue;
+                    }
+
                     bool anyUnrevealed = false;
                     foreach (var product in bundle.Products)
                     {
                         if (product.Id == -1) continue;
-                        if (!product.IsRevealed && !product.IsGiveawayed && !product.IsSetForTrade)
+                        if (!product.IsRevealed)
                         {
+                            if (product.IsSetForGiveaway || product.IsSetForTrade || product.IsGiveawayed || product.IsTradedOut)
+                            {
+                                Console.WriteLine($"Product {product.ProductName} in {bundle.BundleName} skipped because marked for/has been giveawayed or traded");
+                                continue;
+                            }
+
                             anyUnrevealed = true;
                             Console.WriteLine($"Revealing {product.ProductName} from {bundle.BundleName}");
                             await client.RevealProduct(product.Id);
@@ -56,8 +78,14 @@ namespace GroupeesDownload
                 {
                     var product = tradeProducts[i];
                     if (product.Id == -1) continue;
-                    if (!product.IsRevealed && !product.IsGiveawayed && !product.IsSetForTrade)
+                    if (!product.IsRevealed)
                     {
+                        if (product.IsSetForGiveaway || product.IsSetForTrade || product.IsGiveawayed || product.IsTradedOut)
+                        {
+                            Console.WriteLine($"Traded product {product.ProductName} skipped because marked for/has been giveawayed or traded");
+                            continue;
+                        }
+
                         Console.WriteLine($"Revealing {product.ProductName}");
                         await client.RevealProduct(product.Id);
 
@@ -315,7 +343,7 @@ namespace GroupeesDownload
             }
         }
 
-        public List<string> GenerateDownloadsList(bool includeCover, bool useAria2Folders, DownloadFilterTypes filter, bool dedupe)
+        public List<string> GenerateDownloadsList(bool includeCover, DirOrganizationType dirOrgType, DownloadFilterTypes filter, bool dedupe)
         {
             List<string> list = new List<string>();
             HashSet<string> seenUrls = dedupe ? new HashSet<string>() : null;
@@ -324,14 +352,17 @@ namespace GroupeesDownload
             {
                 foreach (var bundle in bundles)
                 {
-                    string append = null;
-                    if (useAria2Folders && !string.IsNullOrWhiteSpace(bundle.BundleName))
+                    string dirParent = null;
+                    if (dirOrgType != DirOrganizationType.None && !string.IsNullOrWhiteSpace(bundle.BundleName))
                     {
-                        append = $"\tdir={SanitizeFilename(bundle.BundleName)}";
+                        if (string.IsNullOrWhiteSpace(bundle.BundleName))
+                            dirParent = "Unknown Bundle";
+                        else
+                            dirParent = SanitizeFilename(bundle.BundleName);
                     }
                     foreach (var product in bundle.Products)
                     {
-                        list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, filter, seenUrls));
+                        list.AddRange(GenerateDownloadsListForProduct(product, includeCover, dirParent, dirOrgType, filter, seenUrls));
                     }
                 }
             }
@@ -339,20 +370,20 @@ namespace GroupeesDownload
             if (tradeProducts != null)
             {
                 string append = null;
-                if (useAria2Folders)
+                if (dirOrgType != DirOrganizationType.None)
                 {
-                    append = "\tdir=trades";
+                    append = "trades";
                 }
                 foreach (var product in tradeProducts)
                 {
-                    list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, filter, seenUrls));
+                    list.AddRange(GenerateDownloadsListForProduct(product, includeCover, append, dirOrgType, filter, seenUrls));
                 }
             }
 
             return list;
         }
 
-        public List<string> GenerateDownloadsListForProduct(Product product, bool includeCover, string append, DownloadFilterTypes filter, HashSet<string> seenUrls)
+        public List<string> GenerateDownloadsListForProduct(Product product, bool includeCover, string dirParent, DirOrganizationType dirOrgType, DownloadFilterTypes filter, HashSet<string> seenUrls)
         {
             List<string> list = new List<string>();
 
@@ -381,8 +412,23 @@ namespace GroupeesDownload
             // Cover
             if (includeCover && product.CoverUrl != null)
             {
-                list.Add(product.CoverUrl.Replace("plate_square/", string.Empty).Replace("small/", string.Empty).Replace("big/", string.Empty));
-                if (append != null) list.Add(append);
+                string coverUrl = product.CoverUrl.Replace("plate_square/", string.Empty).Replace("small/", string.Empty).Replace("big/", string.Empty);
+                // Handle coin icons
+                if (coverUrl.StartsWith("/")) coverUrl = "https://groupees.com" + coverUrl;
+                list.Add(coverUrl);
+                if (dirParent != null && dirOrgType != DirOrganizationType.None)
+                {
+                    if (dirOrgType == DirOrganizationType.BundleAndProduct)
+                    {
+                        list.Add($"\tdir={Path.Combine(dirParent, SanitizeFilename(product.ProductName))}");
+                        list.Add($"\tout=cover{Path.GetExtension(coverUrl)}");
+                    }
+                    else if (dirOrgType == DirOrganizationType.BundleAndType)
+                    {
+                        list.Add($"\tdir={Path.Combine(dirParent, "covers")}");
+                        list.Add($"\tout={SanitizeFilename(product.ProductName + Path.GetExtension(coverUrl))}");
+                    }
+                }
             }
 
             // Is this music?
@@ -404,12 +450,7 @@ namespace GroupeesDownload
                     else
                     {
                         //Console.WriteLine($"Music {product.ProductName}: picked {bestFile.PlatformName} from {string.Join(", ", download.Files.Select(x => x.PlatformName))}");
-                        if (seenUrls == null || !seenUrls.Contains(bestFile.Url))
-                        {
-                            list.Add(bestFile.Url);
-                            if (append != null) list.Add(append);
-                            if (seenUrls != null) seenUrls.Add(bestFile.Url);
-                        }
+                        AddUrlToList(bestFile.Url, list, seenUrls, dirParent, dirOrgType, product.ProductName, CategorizeProduct(product, bestFile));
                     }
                 }
             }
@@ -420,17 +461,46 @@ namespace GroupeesDownload
                     // Queue everything
                     foreach (var file in download.Files)
                     {
-                        if (seenUrls == null || !seenUrls.Contains(file.Url))
-                        {
-                            list.Add(file.Url);
-                            if (append != null) list.Add(append);
-                            if (seenUrls != null) seenUrls.Add(file.Url);
-                        }
+                        AddUrlToList(file.Url, list, seenUrls, dirParent, dirOrgType, product.ProductName, CategorizeProduct(product, file));
                     }
                 }
             }
 
             return list;
+        }
+
+        void AddUrlToList(string url, List<string> list, HashSet<string> seenUrls, string dirParent, DirOrganizationType dirOrgType, string productName, string category)
+        {
+            if (seenUrls == null || !seenUrls.Contains(url))
+            {
+                list.Add(url);
+                if (seenUrls != null) seenUrls.Add(url);
+                if (dirParent != null && dirOrgType != DirOrganizationType.None)
+                {
+                    if (dirOrgType == DirOrganizationType.BundleAndProduct)
+                    {
+                        list.Add($"\tdir={Path.Combine(dirParent, SanitizeFilename(productName))}");
+                    }
+                    else if (dirOrgType == DirOrganizationType.BundleAndType)
+                    {
+                        list.Add($"\tdir={Path.Combine(dirParent, category)}");
+                    }
+                }
+            }
+        }
+
+        string CategorizeProduct(Product product, DownloadFile file)
+        {
+            string lowerPlatform = file.PlatformName?.ToLower();
+            if (product.Tracks.Count != 0) return "music";
+            foreach (var pair in CATEGORY_MAP)
+            {
+                foreach (var plat in pair.Value)
+                {
+                    if (lowerPlatform.Contains(plat)) return pair.Key;
+                }
+            }
+            return "others";
         }
 
         public List<string> ExportAllKeys()

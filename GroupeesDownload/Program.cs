@@ -29,7 +29,7 @@ namespace GroupeesDownload
             var allOption = new Option<bool>("--all", "Apply action to all items of this type.");
             var noCoversOption = new Option<bool>("--no-covers", "Do not include covers in list.");
             var outputOption = new Option<FileInfo>("--output", "Path to output list to.");
-            var useDirsOption = new Option<bool>("--use-dirs", "Split downloads into directories by bundle name (for use with aria2).");
+            var organizeOption = new Option<DirOrganizationType>("--organize", "Organize downloads into folders (for use with aria2).");
             var includeAllOption = new Option<bool>("--include-all", "Also include MP3s even if FLAC is available when downloading music.");
             var filterGamesOption = new Option<bool>("--filter-games", "Filter downloads to games.");
             var filterMusicOption = new Option<bool>("--filter-music", "Filter downloads to music.");
@@ -111,7 +111,7 @@ namespace GroupeesDownload
                 tradesDbOption,
                 noCoversOption,
                 outputOption,
-                useDirsOption,
+                organizeOption,
                 includeAllOption,
                 filterMusicOption,
                 filterGamesOption,
@@ -224,7 +224,7 @@ namespace GroupeesDownload
                 var tradesDb = context.ParseResult.GetValueForOption(tradesDbOption);
                 var noCovers = context.ParseResult.GetValueForOption(noCoversOption);
                 var output = context.ParseResult.GetValueForOption(outputOption);
-                var useDirs = context.ParseResult.GetValueForOption(useDirsOption);
+                var dirOrgType = context.ParseResult.GetValueForOption(organizeOption);
                 var includeAll = context.ParseResult.GetValueForOption(includeAllOption);
                 var filterGames = context.ParseResult.GetValueForOption(filterGamesOption);
                 var filterMusic = context.ParseResult.GetValueForOption(filterMusicOption);
@@ -248,7 +248,7 @@ namespace GroupeesDownload
                 }
                 if (includeAll) filter |= DownloadFilterTypes.MusicDownloadAll;
 
-                var downloadsList = accManage.GenerateDownloadsList(!noCovers, useDirs, filter, dedupe);
+                var downloadsList = accManage.GenerateDownloadsList(!noCovers, dirOrgType, filter, dedupe);
 
                 if (output == null) output = new FileInfo("downloads_list.txt");
                 File.WriteAllLines(output.FullName, downloadsList);
@@ -268,19 +268,35 @@ namespace GroupeesDownload
 
             // ================================================================
 
-            //var testCommand = new Command("test", "Debug functionality.")
-            //{
-            //    userIdOption,
-            //    cookieOption,
-            //    csrfTokenOption,
-            //};
-            //rootCommand.AddCommand(testCommand);
+            var testCommand = new Command("test", "Debug functionality.")
+            {
+                bundlesDbOption,
+            };
+            rootCommand.AddCommand(testCommand);
 
-            //testCommand.SetHandler(async (userId, cookie, csrfToken) =>
-            //{
-            //    InitClient(userId, cookie, csrfToken);
-            //    await scraper.Test();
-            //}, userIdOption, cookieOption, csrfTokenOption);
+            testCommand.SetHandler(bundlesDb =>
+            {
+                var bundles = LoadBundles(bundlesDb);
+                HashSet<string> platformNames = new HashSet<string>();
+                foreach (var bundle in bundles)
+                {
+                    foreach (var product in bundle.Products)
+                    {
+                        foreach (var downloadable in product.Downloads)
+                        {
+                            foreach (var file in downloadable.Files)
+                            {
+                                platformNames.Add(file.PlatformName);
+                            }
+                        }
+                    }
+                }
+
+                foreach (var name in platformNames)
+                {
+                    Console.WriteLine(name);
+                }
+            }, bundlesDbOption);
 
             // ================================================================
 
