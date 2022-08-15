@@ -23,21 +23,24 @@ namespace GroupeesDownload
         Scraper scraper;
         List<Bundle> bundles;
         List<Product> tradeProducts;
+        List<Product> thirdPartyKeys;
 
         public List<Bundle> Bundles => bundles;
         public List<Product> TradeProducts => tradeProducts;
+        public List<Product> ThirdPartyKeys => thirdPartyKeys;
 
-        public AccountManagement(Client client, Scraper scraper, List<Bundle> bundles, List<Product> tradeProducts)
+        public AccountManagement(Client client, Scraper scraper, List<Bundle> bundles, List<Product> tradeProducts, List<Product> thirdPartyKeys)
         {
             this.client = client;
             this.scraper = scraper;
             this.bundles = bundles;
             this.tradeProducts = tradeProducts;
+            this.thirdPartyKeys = thirdPartyKeys;
         }
 
-        public async Task RevealAllProducts()
+        public async Task RevealAllProducts(bool thirdParty)
         {
-            if (bundles != null)
+            if (bundles != null && !thirdParty)
             {
                 foreach (var bundle in bundles)
                 {
@@ -72,17 +75,18 @@ namespace GroupeesDownload
                 }
             }
 
-            if (tradeProducts != null)
+            List<Product> targetProducts = thirdParty ? thirdPartyKeys : tradeProducts;
+            if (targetProducts != null)
             {
-                for (int i = 0; i < tradeProducts.Count; ++i)
+                for (int i = 0; i < targetProducts.Count; ++i)
                 {
-                    var product = tradeProducts[i];
+                    var product = targetProducts[i];
                     if (product.Id == -1) continue;
                     if (!product.IsRevealed)
                     {
                         if (product.IsSetForGiveaway || product.IsSetForTrade || product.IsGiveawayed || product.IsTradedOut)
                         {
-                            Console.WriteLine($"Traded product {product.ProductName} skipped because marked for/has been giveawayed or traded");
+                            Console.WriteLine($"{(thirdParty ? "Third party key" : "Traded product")} {product.ProductName} skipped because marked for/has been giveawayed or traded");
                             continue;
                         }
 
@@ -90,15 +94,15 @@ namespace GroupeesDownload
                         await client.RevealProduct(product.Id);
 
                         Console.WriteLine($"Refreshing product {product.ProductName}");
-                        tradeProducts[i] = await scraper.GetProfileSingleProduct(product.Id);
+                        targetProducts[i] = await scraper.GetUserProduct(product.Id);
                     }
                 }
             }
         }
 
-        public async Task UnsetTradeAllProducts()
+        public async Task UnsetTradeAllProducts(bool thirdParty)
         {
-            if (bundles != null)
+            if (bundles != null && !thirdParty)
             {
                 foreach (var bundle in bundles)
                 {
@@ -131,11 +135,12 @@ namespace GroupeesDownload
                 }
             }
 
-            if (tradeProducts != null)
+            List<Product> targetProducts = thirdParty ? thirdPartyKeys : tradeProducts;
+            if (targetProducts != null)
             {
-                for (int i = 0; i < tradeProducts.Count; ++i)
+                for (int i = 0; i < targetProducts.Count; ++i)
                 {
-                    var product = tradeProducts[i];
+                    var product = targetProducts[i];
                     if (product.Id == -1) continue;
                     bool anyTraded = false;
 
@@ -159,7 +164,7 @@ namespace GroupeesDownload
                     if (anyTraded)
                     {
                         Console.WriteLine($"Refreshing product {product.ProductName}");
-                        tradeProducts[i] = await scraper.GetProfileSingleProduct(product.Id);
+                        targetProducts[i] = await scraper.GetUserProduct(product.Id);
                     }
                 }
             }
@@ -174,9 +179,9 @@ namespace GroupeesDownload
             }
         }
 
-        public async Task UnsetGiveawayAllProducts()
+        public async Task UnsetGiveawayAllProducts(bool thirdParty)
         {
-            if (bundles != null)
+            if (bundles != null && !thirdParty)
             {
                 foreach (var bundle in bundles)
                 {
@@ -209,11 +214,12 @@ namespace GroupeesDownload
                 }
             }
 
-            if (tradeProducts != null)
+            List<Product> targetProducts = thirdParty ? thirdPartyKeys : tradeProducts;
+            if (targetProducts != null)
             {
-                for (int i = 0; i < tradeProducts.Count; ++i)
+                for (int i = 0; i < targetProducts.Count; ++i)
                 {
-                    var product = tradeProducts[i];
+                    var product = targetProducts[i];
                     if (product.Id == -1) continue;
                     bool anyGiveawayed = false;
 
@@ -237,7 +243,7 @@ namespace GroupeesDownload
                     if (anyGiveawayed)
                     {
                         Console.WriteLine($"Refreshing product {product.ProductName}");
-                        tradeProducts[i] = await scraper.GetProfileSingleProduct(product.Id);
+                        targetProducts[i] = await scraper.GetUserProduct(product.Id);
                     }
                 }
             }
@@ -252,9 +258,9 @@ namespace GroupeesDownload
             }
         }
 
-        public async Task RevealAllKeys()
+        public async Task RevealAllKeys(bool thirdParty)
         {
-            if (bundles != null)
+            if (bundles != null && !thirdParty)
             {
                 foreach (var bundle in bundles)
                 {
@@ -297,16 +303,17 @@ namespace GroupeesDownload
                 }
             }
 
-            if (tradeProducts != null)
+            List<Product> targetProducts = thirdParty ? thirdPartyKeys : tradeProducts;
+            if (targetProducts != null)
             {
-                for (int i = 0; i < tradeProducts.Count; ++i)
+                for (int i = 0; i < targetProducts.Count; ++i)
                 {
                     bool anyUnrevealed = false;
-                    var product = tradeProducts[i];
+                    var product = targetProducts[i];
 
                     if (product.IsSetForGiveaway || product.IsSetForTrade || product.IsGiveawayed || product.IsTradedOut)
                     {
-                        Console.WriteLine($"Traded product {product.ProductName} skipped because marked for/has been giveawayed or traded");
+                        Console.WriteLine($"{(thirdParty ? "Third party key" : "Traded product")} {product.ProductName} skipped because marked for/has been giveawayed or traded");
                         continue;
                     }
 
@@ -316,7 +323,7 @@ namespace GroupeesDownload
                         {
                             if (key.IsSetForGiveaway || key.IsSetForTrade || key.IsGiveawayed || key.IsTradedOut)
                             {
-                                Console.WriteLine($"Key {key.PlatformName} for traded product {product.ProductName} skipped because marked for/has been giveawayed or traded");
+                                Console.WriteLine($"Key {key.PlatformName} for {(thirdParty ? "third party key" : "traded product")} {product.ProductName} skipped because marked for/has been giveawayed or traded");
                                 continue;
                             }
 
@@ -328,7 +335,7 @@ namespace GroupeesDownload
                     if (anyUnrevealed)
                     {
                         Console.WriteLine($"Refreshing product {product.ProductName}");
-                        tradeProducts[i] = await scraper.GetProfileSingleProduct(product.Id);
+                        targetProducts[i] = await scraper.GetUserProduct(product.Id);
                     }
                 }
             }
@@ -523,6 +530,14 @@ namespace GroupeesDownload
             if (tradeProducts != null)
             {
                 foreach (var product in tradeProducts)
+                {
+                    export.AddRange(ExportKeysForProduct(product, null));
+                }
+            }
+
+            if (thirdPartyKeys != null)
+            {
+                foreach (var product in thirdPartyKeys)
                 {
                     export.AddRange(ExportKeysForProduct(product, null));
                 }

@@ -5,6 +5,7 @@ using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -14,6 +15,7 @@ namespace GroupeesDownload
     {
         const string DEFAULT_BUNDLES_DB_NAME = "bundles.json";
         const string DEFAULT_TRADES_DB_NAME = "trades.json";
+        const string DEFAULT_TPK_DB_NAME = "third_party_keys.json";
 
         static Client client;
         static Scraper scraper;
@@ -26,6 +28,7 @@ namespace GroupeesDownload
             var csrfTokenOption = new Option<string>("--csrf-token", "The CSRF token value.");
             var bundlesDbOption = new Option<FileInfo>("--bundles-db", () => new FileInfo(DEFAULT_BUNDLES_DB_NAME), "Path to bundle DB.");
             var tradesDbOption = new Option<FileInfo>("--trades-db", () => new FileInfo(DEFAULT_TRADES_DB_NAME), "Path to trades DB.");
+            var tpkDbOption = new Option<FileInfo>("--tpk-db", () => new FileInfo(DEFAULT_TPK_DB_NAME), "Path to third party keys DB.");
             var allOption = new Option<bool>("--all", "Apply action to all items of this type.");
             var noCoversOption = new Option<bool>("--no-covers", "Do not include covers in list.");
             var outputOption = new Option<FileInfo>("--output", "Path to output list to.");
@@ -35,6 +38,7 @@ namespace GroupeesDownload
             var filterMusicOption = new Option<bool>("--filter-music", "Filter downloads to music.");
             var filterOthersOption = new Option<bool>("--filter-others", "Filter downloads to other products (e.g. comics).");
             var dedupeOption = new Option<bool>("--dedupe", "Deduplicate download links based on URL.");
+            var forTpkOption = new Option<bool>("--for-tpk", "Operate on third party keys instead of bundles and trades.");
             var idsArgument = new Argument<int[]>("ids", "IDs of items to act upon.");
 
             var rootCommand = new RootCommand("Groupees Scraper");
@@ -64,7 +68,9 @@ namespace GroupeesDownload
                 csrfTokenOption,
                 bundlesDbOption,
                 tradesDbOption,
+                tpkDbOption,
                 allOption,
+                forTpkOption,
                 idsArgument,
             };
             rootCommand.AddCommand(unmarkTradesCommand);
@@ -76,7 +82,9 @@ namespace GroupeesDownload
                 csrfTokenOption,
                 bundlesDbOption,
                 tradesDbOption,
+                tpkDbOption,
                 allOption,
+                forTpkOption,
                 idsArgument,
             };
             rootCommand.AddCommand(unmarkGiveawaysCommand);
@@ -88,7 +96,9 @@ namespace GroupeesDownload
                 csrfTokenOption,
                 bundlesDbOption,
                 tradesDbOption,
+                tpkDbOption,
                 allOption,
+                forTpkOption,
                 idsArgument,
             };
             rootCommand.Add(revealProductsCommand);
@@ -100,7 +110,9 @@ namespace GroupeesDownload
                 csrfTokenOption,
                 bundlesDbOption,
                 tradesDbOption,
+                tpkDbOption,
                 allOption,
+                forTpkOption,
                 idsArgument,
             };
             rootCommand.Add(revealKeysCommand);
@@ -124,9 +136,21 @@ namespace GroupeesDownload
             {
                 bundlesDbOption,
                 tradesDbOption,
+                tpkDbOption,
                 outputOption,
             };
             rootCommand.Add(exportKeysCommand);
+
+            var dumpThirdPartyKeysCommand = new Command("dump-third-party-keys", "Dumps all third party keys added by yourself.")
+            {
+                userIdOption,
+                cookieOption,
+                csrfTokenOption,
+                bundlesDbOption,
+                tradesDbOption,
+                tpkDbOption,
+            };
+            rootCommand.Add(dumpThirdPartyKeysCommand);
 
             dumpBundlesCommand.SetHandler(async (userId, cookie, csrfToken, bundlesDb) =>
             {
@@ -139,84 +163,132 @@ namespace GroupeesDownload
             {
                 await InitClient(userId, cookie, csrfToken);
                 var tradeProducts = await scraper.GetAllTradesCompletedProducts();
-                SaveTrades(tradesDb, tradeProducts);
+                SaveProducts(tradesDb, tradeProducts);
             }, userIdOption, cookieOption, csrfTokenOption, tradesDbOption);
 
-            unmarkTradesCommand.SetHandler(async (userId, cookie, csrfToken, bundlesDb, tradesDb, isAll, ids) =>
+            unmarkTradesCommand.SetHandler(async (context) =>
             {
+                var userId = context.ParseResult.GetValueForOption(userIdOption);
+                var cookie = context.ParseResult.GetValueForOption(cookieOption);
+                var csrfToken = context.ParseResult.GetValueForOption(csrfTokenOption);
+                var bundlesDb = context.ParseResult.GetValueForOption(bundlesDbOption);
+                var tradesDb = context.ParseResult.GetValueForOption(tradesDbOption);
+                var tpkDb = context.ParseResult.GetValueForOption(tpkDbOption);
+                var isAll = context.ParseResult.GetValueForOption(allOption);
+                var forTpk = context.ParseResult.GetValueForOption(forTpkOption);
+                var ids = context.ParseResult.GetValueForArgument(idsArgument);
+
                 await InitClient(userId, cookie, csrfToken);
 
                 var bundles = LoadBundles(bundlesDb);
-                var tradeProducts = LoadTrades(tradesDb);
-                AccountManagement accManage = new AccountManagement(client, scraper, bundles, tradeProducts);
+                var tradeProducts = LoadProducts(tradesDb);
+                var tpk = LoadProducts(tpkDb);
+                AccountManagement accManage = new AccountManagement(client, scraper, bundles, tradeProducts, tpk);
                 if (isAll)
                 {
-                    await accManage.UnsetTradeAllProducts();
+                    await accManage.UnsetTradeAllProducts(forTpk);
                 }
                 else
                 {
                     await accManage.UnsetTradesById(ids);
                 }
                 if (accManage.Bundles != null) SaveBundles(bundlesDb, accManage.Bundles);
-                if (accManage.TradeProducts != null) SaveTrades(tradesDb, accManage.TradeProducts);
-            }, userIdOption, cookieOption, csrfTokenOption, bundlesDbOption, tradesDbOption, allOption, idsArgument);
+                if (accManage.TradeProducts != null) SaveProducts(tradesDb, accManage.TradeProducts);
+                if (accManage.ThirdPartyKeys != null) SaveProducts(tpkDb, accManage.ThirdPartyKeys);
+            });
 
-            unmarkGiveawaysCommand.SetHandler(async (userId, cookie, csrfToken, bundlesDb, tradesDb, isAll, ids) =>
+            unmarkGiveawaysCommand.SetHandler(async (context) =>
             {
+                var userId = context.ParseResult.GetValueForOption(userIdOption);
+                var cookie = context.ParseResult.GetValueForOption(cookieOption);
+                var csrfToken = context.ParseResult.GetValueForOption(csrfTokenOption);
+                var bundlesDb = context.ParseResult.GetValueForOption(bundlesDbOption);
+                var tradesDb = context.ParseResult.GetValueForOption(tradesDbOption);
+                var tpkDb = context.ParseResult.GetValueForOption(tpkDbOption);
+                var isAll = context.ParseResult.GetValueForOption(allOption);
+                var forTpk = context.ParseResult.GetValueForOption(forTpkOption);
+                var ids = context.ParseResult.GetValueForArgument(idsArgument);
+
                 await InitClient(userId, cookie, csrfToken);
 
                 var bundles = LoadBundles(bundlesDb);
-                var tradeProducts = LoadTrades(tradesDb);
-                AccountManagement accManage = new AccountManagement(client, scraper, bundles, tradeProducts);
+                var tradeProducts = LoadProducts(tradesDb);
+                var tpk = LoadProducts(tpkDb);
+                AccountManagement accManage = new AccountManagement(client, scraper, bundles, tradeProducts, tpk);
                 if (isAll)
                 {
-                    await accManage.UnsetGiveawayAllProducts();
+                    await accManage.UnsetGiveawayAllProducts(forTpk);
                 }
                 else
                 {
                     await accManage.UnsetGiveawaysById(ids);
                 }
                 if (accManage.Bundles != null) SaveBundles(bundlesDb, accManage.Bundles);
-                if (accManage.TradeProducts != null) SaveTrades(tradesDb, accManage.TradeProducts);
-            }, userIdOption, cookieOption, csrfTokenOption, bundlesDbOption, tradesDbOption, allOption, idsArgument);
+                if (accManage.TradeProducts != null) SaveProducts(tradesDb, accManage.TradeProducts);
+                if (accManage.ThirdPartyKeys != null) SaveProducts(tpkDb, accManage.ThirdPartyKeys);
+            });
 
-            revealProductsCommand.SetHandler(async (userId, cookie, csrfToken, bundlesDb, tradesDb, isAll, ids) =>
+            revealProductsCommand.SetHandler(async (context) =>
             {
+                var userId = context.ParseResult.GetValueForOption(userIdOption);
+                var cookie = context.ParseResult.GetValueForOption(cookieOption);
+                var csrfToken = context.ParseResult.GetValueForOption(csrfTokenOption);
+                var bundlesDb = context.ParseResult.GetValueForOption(bundlesDbOption);
+                var tradesDb = context.ParseResult.GetValueForOption(tradesDbOption);
+                var tpkDb = context.ParseResult.GetValueForOption(tpkDbOption);
+                var isAll = context.ParseResult.GetValueForOption(allOption);
+                var forTpk = context.ParseResult.GetValueForOption(forTpkOption);
+                var ids = context.ParseResult.GetValueForArgument(idsArgument);
+
                 await InitClient(userId, cookie, csrfToken);
 
                 var bundles = LoadBundles(bundlesDb);
-                var tradeProducts = LoadTrades(tradesDb);
-                AccountManagement accManage = new AccountManagement(client, scraper, bundles, tradeProducts);
+                var tradeProducts = LoadProducts(tradesDb);
+                var tpk = LoadProducts(tpkDb);
+                AccountManagement accManage = new AccountManagement(client, scraper, bundles, tradeProducts, tpk);
                 if (isAll)
                 {
-                    await accManage.RevealAllProducts();
+                    await accManage.RevealAllProducts(forTpk);
                 }
                 else
                 {
                     await accManage.UnsetGiveawaysById(ids);
                 }
                 if (accManage.Bundles != null) SaveBundles(bundlesDb, accManage.Bundles);
-                if (accManage.TradeProducts != null) SaveTrades(tradesDb, accManage.TradeProducts);
-            }, userIdOption, cookieOption, csrfTokenOption, bundlesDbOption, tradesDbOption, allOption, idsArgument);
+                if (accManage.TradeProducts != null) SaveProducts(tradesDb, accManage.TradeProducts);
+                if (accManage.ThirdPartyKeys != null) SaveProducts(tpkDb, accManage.ThirdPartyKeys);
+            });
 
-            revealKeysCommand.SetHandler(async (userId, cookie, csrfToken, bundlesDb, tradesDb, isAll, ids) =>
+            revealKeysCommand.SetHandler(async (context) =>
             {
+                var userId = context.ParseResult.GetValueForOption(userIdOption);
+                var cookie = context.ParseResult.GetValueForOption(cookieOption);
+                var csrfToken = context.ParseResult.GetValueForOption(csrfTokenOption);
+                var bundlesDb = context.ParseResult.GetValueForOption(bundlesDbOption);
+                var tradesDb = context.ParseResult.GetValueForOption(tradesDbOption);
+                var tpkDb = context.ParseResult.GetValueForOption(tpkDbOption);
+                var isAll = context.ParseResult.GetValueForOption(allOption);
+                var forTpk = context.ParseResult.GetValueForOption(forTpkOption);
+                var ids = context.ParseResult.GetValueForArgument(idsArgument);
+
                 await InitClient(userId, cookie, csrfToken);
 
                 var bundles = LoadBundles(bundlesDb);
-                var tradeProducts = LoadTrades(tradesDb);
-                AccountManagement accManage = new AccountManagement(client, scraper, bundles, tradeProducts);
+                var tradeProducts = LoadProducts(tradesDb);
+                var tpk = LoadProducts(tpkDb);
+                AccountManagement accManage = new AccountManagement(client, scraper, bundles, tradeProducts, tpk);
                 if (isAll)
                 {
-                    await accManage.RevealAllKeys();
+                    await accManage.RevealAllKeys(forTpk);
                 }
                 else
                 {
                     await accManage.RevealKeysById(ids);
                 }
                 if (accManage.Bundles != null) SaveBundles(bundlesDb, accManage.Bundles);
-                if (accManage.TradeProducts != null) SaveTrades(tradesDb, accManage.TradeProducts);
-            }, userIdOption, cookieOption, csrfTokenOption, bundlesDbOption, tradesDbOption, allOption, idsArgument);
+                if (accManage.TradeProducts != null) SaveProducts(tradesDb, accManage.TradeProducts);
+                if (accManage.ThirdPartyKeys != null) SaveProducts(tpkDb, accManage.ThirdPartyKeys);
+            });
 
             generateLinksCommand.SetHandler(context =>
             {
@@ -232,8 +304,8 @@ namespace GroupeesDownload
                 var dedupe = context.ParseResult.GetValueForOption(dedupeOption);
 
                 var bundles = LoadBundles(bundlesDb);
-                var tradeProducts = LoadTrades(tradesDb);
-                AccountManagement accManage = new AccountManagement(client, scraper, bundles, tradeProducts);
+                var tradeProducts = LoadProducts(tradesDb);
+                AccountManagement accManage = new AccountManagement(client, scraper, bundles, tradeProducts, null);
 
                 DownloadFilterTypes filter = DownloadFilterTypes.None;
                 if (filterGames || filterMusic || filterOthers)
@@ -254,17 +326,30 @@ namespace GroupeesDownload
                 File.WriteAllLines(output.FullName, downloadsList);
             });
 
-            exportKeysCommand.SetHandler((bundlesDb, tradesDb, output) =>
+            exportKeysCommand.SetHandler((bundlesDb, tradesDb, tpkDb, output) =>
             {
                 var bundles = LoadBundles(bundlesDb);
-                var tradeProducts = LoadTrades(tradesDb);
-                AccountManagement accManage = new AccountManagement(client, scraper, bundles, tradeProducts);
+                var tradeProducts = LoadProducts(tradesDb);
+                var tpk = LoadProducts(tpkDb);
+                AccountManagement accManage = new AccountManagement(client, scraper, bundles, tradeProducts, tpk);
 
                 var export = accManage.ExportAllKeys();
 
                 if (output == null) output = new FileInfo("keys.csv");
                 File.WriteAllLines(output.FullName, export);
-            }, bundlesDbOption, tradesDbOption, outputOption);
+            }, bundlesDbOption, tradesDbOption, tpkDbOption, outputOption);
+
+            dumpThirdPartyKeysCommand.SetHandler(async (userId, cookie, csrfToken, bundlesDb, tradesDb, tpkDb) =>
+            {
+                await InitClient(userId, cookie, csrfToken);
+                var bundles = LoadBundles(bundlesDb);
+                var trades = LoadProducts(tradesDb);
+                List<int> excludedIds = new List<int>();
+                if (bundles != null) excludedIds.AddRange(bundles.SelectMany(x => x.Products).Select(x => x.Id));
+                if (trades != null) excludedIds.AddRange(trades.Select(x => x.Id));
+                var products = await scraper.GetAllThirdPartyKeys(excludedIds);
+                SaveProducts(tpkDb, products);
+            }, userIdOption, cookieOption, csrfTokenOption, bundlesDbOption, tradesDbOption, tpkDbOption);
 
             // ================================================================
 
@@ -367,24 +452,24 @@ namespace GroupeesDownload
             File.WriteAllText(bundlesDb.FullName, json);
         }
 
-        static List<Product> LoadTrades(FileInfo tradesDb)
+        static List<Product> LoadProducts(FileInfo db)
         {
             try
             {
-                string json = File.ReadAllText(tradesDb.FullName);
+                string json = File.ReadAllText(db.FullName);
                 return JsonSerializer.Deserialize<List<Product>>(json, serOpts);
             }
             catch (FileNotFoundException)
             {
-                if (tradesDb.Name != DEFAULT_TRADES_DB_NAME) throw;
+                if (db.Name != DEFAULT_TRADES_DB_NAME) throw;
                 return null;
             }
         }
 
-        static void SaveTrades(FileInfo tradesDb, List<Product> tradeProducts)
+        static void SaveProducts(FileInfo db, List<Product> products)
         {
-            string json = JsonSerializer.Serialize(tradeProducts, serOpts);
-            File.WriteAllText(tradesDb.FullName, json);
+            string json = JsonSerializer.Serialize(products, serOpts);
+            File.WriteAllText(db.FullName, json);
         }
     }
 }

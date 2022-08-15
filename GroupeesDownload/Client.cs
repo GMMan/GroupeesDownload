@@ -90,6 +90,19 @@ namespace GroupeesDownload
             }
         }
 
+        public async Task<string> GetUserProduct(int id)
+        {
+            var builder = new UriBuilder($"{BASE_ADDR}/user_products/{id}");
+            var queryBuilder = HttpUtility.ParseQueryString(builder.Query);
+            queryBuilder["user_id"] = userId.ToString();
+            builder.Query = queryBuilder.ToString();
+
+            using (var resp = await GetResponseWithAccept(HttpMethod.Get, builder.Uri.ToString(), ACCEPT_JAVASCRIPT, true))
+            {
+                return await resp.Content.ReadAsStringAsync();
+            }
+        }
+
         public async Task<string> GetProfileProductDetails(int id)
         {
             var builder = new UriBuilder($"{BASE_ADDR}/profile/products/{id}");
@@ -106,6 +119,19 @@ namespace GroupeesDownload
         public async Task<string> GetProfileProduct(int id)
         {
             using (var resp = await GetResponseWithAccept(HttpMethod.Get, $"{BASE_ADDR}/profile/products/{id}", ACCEPT_HTML))
+            {
+                return await resp.Content.ReadAsStringAsync();
+            }
+        }
+
+        public async Task<string> GetProfileProductPage(int page)
+        {
+            var builder = new UriBuilder($"{BASE_ADDR}/profile/products");
+            var queryBuilder = HttpUtility.ParseQueryString(builder.Query);
+            queryBuilder["page"] = page.ToString();
+            builder.Query = queryBuilder.ToString();
+
+            using (var resp = await GetResponseWithAccept(HttpMethod.Get, builder.Uri.ToString(), ACCEPT_JAVASCRIPT, true))
             {
                 return await resp.Content.ReadAsStringAsync();
             }

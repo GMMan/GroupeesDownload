@@ -22,6 +22,7 @@ namespace GroupeesDownload.Models
         public List<Track> Tracks { get; set; } = new List<Track>();
         public int? TradeId { get; set; }
         public int? GiveawayId { get; set; }
+        public bool IsOwnThirdPartyKey { get; set; }
 
 
         public override string ToString()
