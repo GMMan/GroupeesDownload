@@ -268,35 +268,35 @@ namespace GroupeesDownload
 
             // ================================================================
 
-            var testCommand = new Command("test", "Debug functionality.")
-            {
-                bundlesDbOption,
-            };
-            rootCommand.AddCommand(testCommand);
+            //var testCommand = new Command("test", "Debug functionality.")
+            //{
+            //    bundlesDbOption,
+            //};
+            //rootCommand.AddCommand(testCommand);
 
-            testCommand.SetHandler(bundlesDb =>
-            {
-                var bundles = LoadBundles(bundlesDb);
-                HashSet<string> platformNames = new HashSet<string>();
-                foreach (var bundle in bundles)
-                {
-                    foreach (var product in bundle.Products)
-                    {
-                        foreach (var downloadable in product.Downloads)
-                        {
-                            foreach (var file in downloadable.Files)
-                            {
-                                platformNames.Add(file.PlatformName);
-                            }
-                        }
-                    }
-                }
+            //testCommand.SetHandler(bundlesDb =>
+            //{
+            //    var bundles = LoadBundles(bundlesDb);
+            //    HashSet<string> platformNames = new HashSet<string>();
+            //    foreach (var bundle in bundles)
+            //    {
+            //        foreach (var product in bundle.Products)
+            //        {
+            //            foreach (var downloadable in product.Downloads)
+            //            {
+            //                foreach (var file in downloadable.Files)
+            //                {
+            //                    platformNames.Add(file.PlatformName);
+            //                }
+            //            }
+            //        }
+            //    }
 
-                foreach (var name in platformNames)
-                {
-                    Console.WriteLine(name);
-                }
-            }, bundlesDbOption);
+            //    foreach (var name in platformNames)
+            //    {
+            //        Console.WriteLine(name);
+            //    }
+            //}, bundlesDbOption);
 
             // ================================================================
 
