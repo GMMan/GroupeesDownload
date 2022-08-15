@@ -461,7 +461,7 @@ namespace GroupeesDownload
             }
             catch (FileNotFoundException)
             {
-                if (db.Name != DEFAULT_TRADES_DB_NAME) throw;
+                if (db.Name != DEFAULT_TRADES_DB_NAME && db.Name != DEFAULT_TPK_DB_NAME) throw;
                 return null;
             }
         }
