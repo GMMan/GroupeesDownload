@@ -572,6 +572,19 @@ namespace GroupeesDownload
                 {
                     DownloadFile file = new DownloadFile();
                     file.PlatformName = link.GetAttribute("data-platform");
+                    if (file.PlatformName == null)
+                    {
+                        // Games don't have platform in attribute, try to find from presentation
+                        var sibling = link.Parent.PreviousSibling;
+                        while (sibling != null)
+                        {
+                            if (sibling is Element elem && elem.GetAttribute("role") == "presentation")
+                            {
+                                file.PlatformName = elem.TextContent;
+                            }
+                            sibling = sibling.PreviousSibling;
+                        }
+                    }
                     file.Url = link.GetAttribute("href");
                     files.Add(file);
                 }
