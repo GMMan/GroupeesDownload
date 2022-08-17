@@ -435,6 +435,11 @@ namespace GroupeesDownload
                         list.Add($"\tdir={Path.Combine(dirParent, "covers")}");
                         list.Add($"\tout={SanitizeFilename(product.ProductName + Path.GetExtension(coverUrl))}");
                     }
+                    else if (dirOrgType == DirOrganizationType.BundleOnly)
+                    {
+                        list.Add($"\tdir={dirParent}");
+                        list.Add($"\tout={SanitizeFilename(product.ProductName + Path.GetExtension(coverUrl))}");
+                    }
                 }
             }
 
@@ -491,6 +496,10 @@ namespace GroupeesDownload
                     else if (dirOrgType == DirOrganizationType.BundleAndType)
                     {
                         list.Add($"\tdir={Path.Combine(dirParent, category)}");
+                    }
+                    else if (dirOrgType == DirOrganizationType.BundleOnly)
+                    {
+                        list.Add($"\tdir={dirParent}");
                     }
                 }
             }
