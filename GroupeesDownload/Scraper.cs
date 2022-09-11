@@ -618,6 +618,7 @@ namespace GroupeesDownload
                             if (sibling is Element elem && elem.GetAttribute("role") == "presentation")
                             {
                                 file.PlatformName = elem.TextContent;
+                                break;
                             }
                             sibling = sibling.PreviousSibling;
                         }
