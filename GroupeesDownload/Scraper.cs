@@ -351,6 +351,7 @@ namespace GroupeesDownload
                     announcements = nProduct.QuerySelector(".announcement").InnerHtml;
                     continue;
                 }
+                if (nProduct.HasClassName("donate")) continue;
 
                 if (!nProduct.HasClassName("product")) throw new ParsingException("Non-product found at root level.", nProduct.OuterHtml);
                 products.Add(ParseProductElement(nProduct));
